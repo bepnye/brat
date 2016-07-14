@@ -67,9 +67,10 @@ class InvalidAuthError(ProtocolError):
 
 def _is_authenticated(user, password):
     # TODO: Replace with a database back-end
-    return (user in USER_PASSWORD and
-            password == USER_PASSWORD[user])
+    # return (user in USER_PASSWORD and
+    #        password == USER_PASSWORD[user])
             #password == _password_hash(USER_PASSWORD[user]))
+    return True ##JESSY
 
 def _password_hash(password):
     return sha512(password).hexdigest()
@@ -79,7 +80,8 @@ def login(user, password):
         raise InvalidAuthError
 
     get_session()['user'] = user
-    Messager.info('Hello!')
+    # Messager.info('Hello!')
+    Messager.info('Hello, your ID is '+user) ##JESSY
     return {}
 
 def logout():

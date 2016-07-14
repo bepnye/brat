@@ -28,6 +28,9 @@ from common import ProtocolError
 from filelock import file_lock
 from message import Messager
 
+## JESSY get username
+from session import get_session
+
 
 ### Constants
 # The only suffix we allow to write to, which is the joined annotation file
@@ -295,7 +298,8 @@ class Annotations(object):
         if not input_files:
             # Our first attempts at finding the input by checking suffixes
             # failed, so we try to attach know suffixes to the path.
-            sugg_path = document + '.' + JOINED_ANN_FILE_SUFF
+            # sugg_path = document + '.' + JOINED_ANN_FILE_SUFF
+            sugg_path = document + '.' + self.user + '.' + JOINED_ANN_FILE_SUFF ##JESSY add user to file path
             if isfile(sugg_path):
                 # We found a joined file by adding the joined suffix
                 input_files = [sugg_path]
@@ -310,7 +314,7 @@ class Annotations(object):
                             for suff in PARTIAL_ANN_FILE_SUFF)
                         if isfile(sugg_path)]
                 self._read_only = True
-
+        Messager.error(input_files)
         return input_files
             
     #TODO: DOC!
@@ -333,6 +337,12 @@ class Annotations(object):
         from collections import defaultdict
         from os.path import basename, getmtime, getctime
         #from fileinput import FileInput, hook_encoded
+
+        ## JESSY get user GUID and modify file prefix
+        try:
+            self.user = get_session()['user']
+        except KeyError:
+            self.user = 'anonymous'
 
         # we should remember this
         self._document = document
@@ -358,10 +368,13 @@ class Annotations(object):
         input_files = self._select_input_files(document)
 
         if not input_files:
-            with open('{}.{}'.format(document, JOINED_ANN_FILE_SUFF), 'w'):
+            # with open('{}.{}'.format(document, JOINED_ANN_FILE_SUFF), 'w'):
+            ##JESSY add user to file path
+            with open('{}.{}.{}'.format(document, self.user, JOINED_ANN_FILE_SUFF), 'w'):
                 pass
 
             input_files = self._select_input_files(document)
+            Messager.error(input_files)
             if not input_files:
                 raise AnnotationFileNotFoundError(document)
 

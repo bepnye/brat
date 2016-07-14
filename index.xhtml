@@ -11,6 +11,7 @@
     <link href="static/jquery-theme/jquery-ui-redmond.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="client/lib/head.load.min.js"></script>
     <script type="text/javascript">
+      var cur_guid = guid();
       head.js(
           // libraries
           'client/lib/jquery.min.js',
@@ -36,6 +37,9 @@
           'client/src/spinner.js'
       );
       head.ready(function() {
+          // JESSY
+          $("#uniqueid").html("Your unique ID (do not refresh): "+cur_guid);
+          $('#auth_button').hide(); //JESSY
           // var dispatcher = new Dispatcher(); // XXX DEBUG
           dispatcher = new Dispatcher();
           var urlMonitor = new URLMonitor(dispatcher);
@@ -49,6 +53,17 @@
           // Util.profileEnable();
           dispatcher.post('init');
       });
+
+      // JESSY
+      function guid() {
+        function s4() {
+          return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+        }
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+          s4() + '-' + s4() + s4() + s4();
+      }
 
     </script>
     <link rel="stylesheet" type="text/css" href="static/style-vis.css"/>
@@ -116,6 +131,7 @@
         <div id="document_name">
           <input readonly="readonly" class="ui-widget-header"/>
         </div>
+        <div id="uniqueid"></div>
         <!-- <span id="document_ctime"/> -->
       </div>
       <div id="pulldown" class="unselectable ui-widget-content">

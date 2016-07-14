@@ -1948,8 +1948,10 @@ var VisualizerUI = (function($, window, undefined) {
       initForm(authForm, { resizable: false });
       var authFormSubmit = function(evt) {
         dispatcher.post('hideForm');
-        var _user = $('#auth_user').val();
-        var password = $('#auth_pass').val();
+        // var _user = $('#auth_user').val();
+        var _user = cur_guid; // JESSY
+        // var password = $('#auth_pass').val();
+        var password = cur_guid; // JESSY
         dispatcher.post('ajax', [{
             action: 'login',
             user: _user,
@@ -1967,6 +1969,7 @@ var VisualizerUI = (function($, window, undefined) {
                 $('.login').show();
                 dispatcher.post('user', [user]);
               }
+              dispatcher.post('user', [user]);
           }]);
         return false;
       };
@@ -1985,7 +1988,7 @@ var VisualizerUI = (function($, window, undefined) {
         }
       });
       authForm.submit(authFormSubmit);
-
+      authFormSubmit(); // JESSY authomatically login
 
       var tutorialForm = $('#tutorial');
       var isWebkit = 'WebkitAppearance' in document.documentElement.style;
