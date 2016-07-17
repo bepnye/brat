@@ -1533,6 +1533,13 @@ var VisualizerUI = (function($, window, undefined) {
       var moveInFileBrowser = function(dir) {
         var pos = currentSelectorPosition();
         var newPos = pos + dir;
+        // JESSY add handler for displaying guid
+        if (newPos >= selectorData.items.length) {
+          $('#submit_button').show();
+        } else if (newPos < selectorData.items.length-1) {
+          $('#submit_button').hide();
+        }
+        console.log("moveInFileBrowser: "+pos+" "+selectorData.items.length)
         if (newPos >= 0 && newPos < selectorData.items.length &&
             selectorData.items[newPos][0] != "c") {
           // not at the start, and the previous is not a collection (dir)
@@ -1542,6 +1549,7 @@ var VisualizerUI = (function($, window, undefined) {
         }
         return false;
       };
+
      
       /* Automatically proceed from document to document */ 
       var autoPagingTimeout = null;
@@ -1765,7 +1773,11 @@ var VisualizerUI = (function($, window, undefined) {
           $cmpButton.append($cmpLink);
           $cmpLink.button();
         }
-          
+         
+        // JESSY  
+        //var pos = currentSelectorPosition();
+        //$docName = $('#document_name input').val("Doc "+pos+" of "+(selectorData.items.length-1)+". Do not refresh this page.");
+        //console.log(selectorData.items);
         $docName = $('#document_name input').val(coll + doc);
         var docName = $docName[0];
         // TODO do this on resize, as well

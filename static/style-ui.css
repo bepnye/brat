@@ -285,7 +285,8 @@ div.scroll_wrapper_upper div.scroller {
 }
 #help_link {
   padding-right: 0.5em;
-  color: darkgray;
+/*  color: darkgray;*/
+  color: white; /*JESSY: change color of help link;*/
   vertical-align: center;
   float: right;
 }

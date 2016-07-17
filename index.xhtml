@@ -38,8 +38,12 @@
       );
       head.ready(function() {
           // JESSY
-          $("#uniqueid").html("Your unique ID (do not refresh): "+cur_guid);
-          $('#auth_button').hide(); //JESSY
+          $("#uniqueid").html("Your unique ID is: "+cur_guid);
+          $('#submit_button').hide();
+          $('#auth_button').hide();
+          // $('#document_name').remove();
+          $('#pulldown').remove();
+          
           // var dispatcher = new Dispatcher(); // XXX DEBUG
           dispatcher = new Dispatcher();
           var urlMonitor = new URLMonitor(dispatcher);
@@ -63,6 +67,20 @@
         }
         return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
           s4() + '-' + s4() + s4() + s4();
+      }
+
+      // JESSY
+      function submitTrigger() {
+        var uidWindow = $("#uid_window");
+        dispatcher.post('initForm', [uidWindow, {
+          width: 400, 
+          no_cancel: true,    
+          no_ok: true,        
+          close: function(evt) {
+            keymap = null;
+          }
+        }]);
+        dispatcher.post('showForm', [uidWindow]);
       }
 
     </script>
@@ -125,13 +143,18 @@
     <div id="header" class="ui-widget">
       <div id="mainHeader" class="ui-widget-header">
         <div id="mainlogo" class="logo unselectable">brat</div>
+        <!--         JESSY: move help link to the top bar so that the pull down bar can be disabled -->
+        <a id="help_link" target="manual" href="http://brat.nlplab.org/manual.html">Help <img src="static/img/Fugue-shadowless-question.png"/></a>
         <span id="navbuttons">
           <img id="prev" alt="Previous document (Cursor Left)" title="Previous document (Cursor Left)" src="static/img/arrow-180.png"/><img id="next" alt="Next document (Cursor Right)" title="Next document (Cursor Right)" src="static/img/arrow.png"/>
         </span>
+        <div id="submit_button">
+          This is the last task. Please click to submit: 
+          <input type="button" value="Submit" onclick="submitTrigger()" />
+        </div>
         <div id="document_name">
           <input readonly="readonly" class="ui-widget-header"/>
         </div>
-        <div id="uniqueid"></div>
         <!-- <span id="document_ctime"/> -->
       </div>
       <div id="pulldown" class="unselectable ui-widget-content">
@@ -169,6 +192,10 @@
         <input type="file" id="import_coll" class="borderless" accept="application/zip,application/x-gzip" />
       </fieldset>
     </form>
+    <!-- JESSY: Unique ID dialog -->
+    <div id="uid_window" class="dialog">
+      <div id="uniqueid">Your unique ID is: cur_guid</div>
+    </div>
     <!-- Data dialog -->
     <form id="data_form" class="dialog" title="Data">
       <!-- Data dialog export section -->

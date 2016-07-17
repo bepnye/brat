@@ -314,7 +314,7 @@ class Annotations(object):
                             for suff in PARTIAL_ANN_FILE_SUFF)
                         if isfile(sugg_path)]
                 self._read_only = True
-        Messager.error(input_files)
+        # Messager.error(input_files)
         return input_files
             
     #TODO: DOC!
@@ -374,7 +374,7 @@ class Annotations(object):
                 pass
 
             input_files = self._select_input_files(document)
-            Messager.error(input_files)
+            # Messager.error(input_files)
             if not input_files:
                 raise AnnotationFileNotFoundError(document)
 
