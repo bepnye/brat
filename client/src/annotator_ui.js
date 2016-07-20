@@ -2437,44 +2437,46 @@ var AnnotatorUI = (function($, window, undefined) {
           alsoResize: '#entity_and_event_wrapper',
           width: 760,
           buttons: [{
-              id: 'span_form_add_fragment',
-              text: "Add Frag.",
-              click: addFragment
-            }, {
+            //   id: 'span_form_add_fragment',
+            //   text: "Add Frag.",
+            //   click: addFragment
+            // }, {
               id: 'span_form_delete',
               text: "Delete",
               click: deleteSpan
-            }, {
-              id: 'span_form_delete_fragment',
-              text: "Delete Frag.",
-              click: deleteFragment
-            }, {
-              id: 'span_form_reselect',
-              text: 'Move',
-              click: reselectSpan
-            }, {
-              id: 'span_form_reselect_fragment',
-              text: 'Move Frag.',
-              click: reselectFragment
-            }, {
-              id: 'span_form_split',
-              text: 'Split',
-              click: splitSpan
-            }
+            },
+            // {
+            //   id: 'span_form_delete_fragment',
+            //   text: "Delete Frag.",
+            //   click: deleteFragment
+            // }, {
+            //   id: 'span_form_reselect',
+            //   text: 'Move',
+            //   click: reselectSpan
+            // }, {
+            //   id: 'span_form_reselect_fragment',
+            //   text: 'Move Frag.',
+            //   click: reselectFragment
+            // }, {
+            //   id: 'span_form_split',
+            //   text: 'Split',
+            //   click: splitSpan
+            // }
           ],
           create: function(evt) {
             var $ok = $('#span_form-ok').wrap('<span id="span_form_lock_bset"/>');
             var $span = $ok.parent();
-            var $lock = $('<input id="span_form_lock" type="checkbox"/>').insertBefore($ok);
-            $('<label for="span_form_lock"/>').text("Lock type").insertBefore($ok);
-            $lock.button({
-              id: 'span_form_lock',
-              text: false,
-              icons: {
-                primary: 'ui-icon-unlocked'
-              },
-            });
-            $lock.click(spanChangeLock);
+            // JESSY removing lock
+            // var $lock = $('<input id="span_form_lock" type="checkbox"/>').insertBefore($ok);
+            // $('<label for="span_form_lock"/>').text("Lock type").insertBefore($ok);
+            // $lock.button({
+            //   id: 'span_form_lock',
+            //   text: false,
+            //   icons: {
+            //     primary: 'ui-icon-unlocked'
+            //   },
+            // });
+            // $lock.click(spanChangeLock);
             $($span).buttonset();
           },
           beforeClose: function(evt) {
