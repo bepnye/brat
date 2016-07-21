@@ -41,8 +41,12 @@
           $("#uniqueid").html("Your unique ID is: "+cur_guid);
           $('#submit_button').hide();
           $('#auth_button').hide();
-          $('#document_name').remove();
+          $('#document_name').hide();
           $('#pulldown').remove();
+          // hide the Messager window if needed
+          // $('#pulluptrigger').remove();
+          // $('#messagepullup').hide();
+          // $('#messages').hide();
           // $('#span_search_fieldset').remove();
           
           // var dispatcher = new Dispatcher(); // XXX DEBUG
@@ -145,7 +149,7 @@
       <div id="mainHeader" class="ui-widget-header">
         <div id="mainlogo" class="logo unselectable">brat</div>
         <!--         JESSY: move help link to the top bar so that the pull down bar can be disabled; link TBD -->
-        <a id="help_link" target="manual" href="#">Help <img src="static/img/Fugue-shadowless-question.png"/></a>
+        <a id="help_link" target="_blank" href="http://www.seas.upenn.edu/~ljunyi/scratch/help.html">Help <img src="static/img/Fugue-shadowless-question.png"/></a>
         <span id="navbuttons">
           <img id="prev" alt="Previous document (Cursor Left)" title="Previous document (Cursor Left)" src="static/img/arrow-180.png"/><img id="next" alt="Next document (Cursor Right)" title="Next document (Cursor Right)" src="static/img/arrow.png"/>
         </span>
