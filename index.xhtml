@@ -11,6 +11,7 @@
     <link href="static/jquery-theme/jquery-ui-redmond.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="client/lib/head.load.min.js"></script>
     <script type="text/javascript">
+      var cur_guid = guid();
       head.js(
           // libraries
           'client/lib/jquery.min.js',
@@ -36,6 +37,17 @@
           'client/src/spinner.js'
       );
       head.ready(function() {
+          // JESSY
+          $("#uniqueid").html("Task complete! Your unique ID is: "+cur_guid);
+          $('#auth_button').hide();
+          $('#prev').hide();
+          $('#document_name').hide();
+          $('#pulldown').remove();
+          // hide the Messager window if needed
+          $('#pulluptrigger').remove();
+          //$('#messagepullup').hide();
+          $('#messages').hide();
+          
           // var dispatcher = new Dispatcher(); // XXX DEBUG
           dispatcher = new Dispatcher();
           var urlMonitor = new URLMonitor(dispatcher);
@@ -50,9 +62,44 @@
           dispatcher.post('init');
       });
 
+      // JESSY
+      function guid() {
+        function s4() {
+          return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+        }
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+          s4() + '-' + s4() + s4() + s4();
+      }
+      // BEN
+      function guid2() {
+        function s2() {
+          return Math.floor((1 + Math.random()) * 0x100)
+            .toString(8)
+            .substring(1);
+        }
+        return s2()+'-'+s2();
+      }
+
+      // JESSY
+      function submitTrigger() {
+        var uidWindow = $("#uid_window");
+        dispatcher.post('initForm', [uidWindow, {
+          width: 600, 
+          height: 100, 
+          no_cancel: true,    
+          no_ok: true,        
+          close: function(evt) {
+            keymap = null;
+          }
+        }]);
+        dispatcher.post('showForm', [uidWindow]);
+      }
+
     </script>
-    <link rel="stylesheet" type="text/css" href="static/style-vis.css"/>
     <link rel="stylesheet" type="text/css" href="static/style-ui.css"/>
+    <link rel="stylesheet" type="text/css" href="static/style-vis.css"/>
     <link rel="shortcut icon" type="image/x-icon" href="favicon.ico"/>
   </head>
   <body>
@@ -110,8 +157,12 @@
     <div id="header" class="ui-widget">
       <div id="mainHeader" class="ui-widget-header">
         <div id="mainlogo" class="logo unselectable">brat</div>
+        <!--         JESSY: move help link to the top bar so that the pull down bar can be disabled; link TBD -->
+        <a id="help_link" target="_blank" href="http://www.seas.upenn.edu/~bennye/pico/p/help.html">Help <img src="static/img/Fugue-shadowless-question.png"/></a>
         <span id="navbuttons">
-          <img id="prev" alt="Previous document (Cursor Left)" title="Previous document (Cursor Left)" src="static/img/arrow-180.png"/><img id="next" alt="Next document (Cursor Right)" title="Next document (Cursor Right)" src="static/img/arrow.png"/>
+          <img id="prev" alt="Previous document (Cursor Left)" title="Previous document (Cursor Left)" src="static/img/arrow-180.png"/>
+          <img id="next" alt="Next document (Cursor Right)" title="Next document (Cursor Right)" src="static/img/arrow.png"/>
+          <img id="coref_button" alt="Coreference task" title="Coreference task" src="static/img/Fugue-shadowless-exclamation-white.png"/>
         </span>
         <div id="document_name">
           <input readonly="readonly" class="ui-widget-header"/>
@@ -153,6 +204,10 @@
         <input type="file" id="import_coll" class="borderless" accept="application/zip,application/x-gzip" />
       </fieldset>
     </form>
+    <!-- JESSY: Unique ID dialog -->
+    <div id="uid_window" class="dialog">
+      <div id="uniqueid">Task completed! Your unique ID is: cur_guid</div>
+    </div>
     <!-- Data dialog -->
     <form id="data_form" class="dialog" title="Data">
       <!-- Data dialog export section -->
@@ -583,44 +638,68 @@
         <div id="viewspan_selected"/>
       </fieldset>
 
-      <fieldset id="viewspan_search_fieldset">
+<!--       JESSY: disabling link -->
+<!--       <fieldset id="viewspan_search_fieldset">
         <legend>Search</legend>
         <div id="viewspan_search_links"/>
-      </fieldset>
+      </fieldset> -->
 
       <fieldset>
         <legend>Notes</legend>
         <input id="viewspan_notes" class="borderless" readonly="readonly"/>
       </fieldset>
     </form>
+    <!-- BEN: extra coref dialog option -->
+    <form id="coref_form" class="dialog" title="Same Concepts">
+      <fieldset>
+        <div id="coref_wrapper" class="split_wrapper">
+          <div id="coref_section" class="wrapper_full_width">
+
+            <div id="span_texts_label" class="label-like">Original snippet</div>
+            <div id="span_texts" class="scroll_wrapper_upper_coref">
+              <div class="scroller"/>
+            </div>
+
+            <div id="corefs_label" class="label-like">Coreferential snippets</div>
+            <div id="corefs" class="scroll_wrapper_lower_coref">
+              <div class="scroller"/>
+            </div>
+
+          </div>
+        </div>
+      </fieldset>
+    </form>
     <!-- Span dialog (view+edit) -->
     <form id="span_form" class="dialog" title="Span">
       <!-- Span dialog annotated text -->
       <fieldset id="span_selected_fset">
-        <legend>Text</legend>
-        <a target="brat_linked" id="span_highlight_link" href="#">Link</a>
-        <div id="span_selected"/>
+        <legend>Snippet</legend>
+<!--       JESSY: disabling link -->
+<!--         <a target="brat_linked" id="span_highlight_link" href="#">Link</a>
+ -->        <div id="span_selected"/>
       </fieldset>
       <!-- Span dialog search links -->
-      <fieldset id="span_search_fieldset">
+<!--       JESSY: disabling search -->
+<!--       <fieldset id="span_search_fieldset">
         <legend>Search</legend>
         <div id="span_search_links"/>
-      </fieldset>
+      </fieldset> -->
       <!-- Span dialog type selector -->
       <fieldset>
         <div id="entity_and_event_wrapper" class="split_wrapper">
           <div id="span_entity_section" class="wrapper_half_left">
-            <div id="entity_label" class="label-like">Entity type</div>
+            <!--JESSY: changing term only for this annotation
+            <div id="entity_label" class="label-like">Entity type</div> -->
+            <div id="entity_label" class="label-like">What does the snippet describe?</div>
             <div id="entity_types" class="scroll_wrapper_upper">
               <div class="scroller"/>
             </div>
             <!-- NOTE: the attribute labels must be *outside* of the
                  divs they logically belong to prevent scrollers
                  overflowing them. -->
-            <div id="entity_attribute_label"
-                 class="label-like wrapper_lower_label">Entity attributes</div>
+            <div id="entity_attribute_label" class="label-like">Which tags apply to this snippet?</div>
             <div id="entity_attributes" class="scroll_wrapper_lower">
-              <div class="scroller small-buttons"/>
+              <div class="scroller"/>
             </div>
           </div><div id="span_event_section" class="wrapper_half_right">
             <div id="event_label" class="label-like">Event type</div>
@@ -654,6 +733,7 @@
         </div>
       </fieldset>
       <!-- Span dialog notes -->
+      <!--
       <fieldset>
         <legend>Notes</legend>
         <div id="span_notes_container">
@@ -662,6 +742,7 @@
                  value="&#x2715;" title="Clear notes"/>
         </div>
       </fieldset>
+      -->
     </form>
     <!-- Rapid mode span dialog -->
     <form id="rapid_span_form" class="dialog" title="Span type">

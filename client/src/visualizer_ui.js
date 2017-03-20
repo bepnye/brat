@@ -26,6 +26,7 @@ var VisualizerUI = (function($, window, undefined) {
       var docScroll;
       var user = null;
       var annotationAvailable = false;
+      var updatedAnn = false;
 
       var svgElement = $(svg._svg);
       var svgId = svgElement.parent().attr('id');
@@ -43,6 +44,9 @@ var VisualizerUI = (function($, window, undefined) {
 
       var matchFocus = '';
       var matches = '';
+
+      var corefFinished = false;
+      var corefMoveDir = 0;
 
       /* START "no svg" message - related */
 
@@ -469,6 +473,10 @@ var VisualizerUI = (function($, window, undefined) {
       var onDocChanged = function() {
         commentPopup.hide();
         commentDisplayed = false;
+
+        corefMoveDir = 0;
+        corefFinished = false;
+        corefMap.clear();
       };
 
       var displayArcComment = function(
@@ -1530,18 +1538,64 @@ var VisualizerUI = (function($, window, undefined) {
         }
       };
 
-      var moveInFileBrowser = function(dir) {
-        var pos = currentSelectorPosition();
-        var newPos = pos + dir;
-        if (newPos >= 0 && newPos < selectorData.items.length &&
-            selectorData.items[newPos][0] != "c") {
-          // not at the start, and the previous is not a collection (dir)
-          dispatcher.post('allowReloadByURL');
-          dispatcher.post('setDocument', [selectorData.items[newPos][2],
-                                          selectorData.items[newPos][1]]);
-        }
-        return false;
+      var pico1 = 'participants';
+      var pico2 = 'interventions';
+      var pico3 = 'outcomes';
+      var nextPicoColl = function(curPicoColl) {
+        if (curPicoColl.includes(pico1)) { return curPicoColl.replace(pico1, pico2); }
+        if (curPicoColl.includes(pico2)) { return curPicoColl.replace(pico2, pico3); }
+        if (curPicoColl.includes(pico3)) { return curPicoColl; }
       };
+      var prevPicoColl = function(curPicoColl) {
+        if (curPicoColl.includes(pico1)) { return curPicoColl; }
+        if (curPicoColl.includes(pico2)) { return curPicoColl.replace(pico2, pico1); }
+        if (curPicoColl.includes(pico3)) { return curPicoColl.replace(pico3, pico2); }
+      };
+
+      var findNewPico = function(dir) {
+        coll_pieces = coll.split('/');
+        doc_names = coll_pieces[2].split('_');
+        cur_pos = doc_names.indexOf(doc);
+        new_pos = cur_pos + dir;
+        if (new_pos >= 0 && new_pos <= 2) {
+          new_doc = doc_names[new_pos];
+          new_coll = coll_pieces.slice(0,-2).join('/') + '/' + new_doc + '/';
+        } else {
+          new_doc = doc;
+          new_coll = coll;
+        }
+        return [new_doc, new_coll];
+      };
+
+      var moveInFileBrowser = function(dir) {
+        if (corefFinished == false) {
+          // BEN: pop up the coref form before leaving the current document
+          corefMoveDir = dir;
+          console.log('Time to do coref!');
+          fillAndDisplayCorefForm();
+          return false;
+        } else {
+
+          newPico = findNewPico(dir);
+
+          newDoc = newPico[0];
+          newColl = newPico[1];
+
+          if (newColl == coll) {
+            if (dir == 1) {
+              console.log('Reached end of collection');
+              submitTrigger();
+              return false;
+            }
+          }
+
+          dispatcher.post('allowReloadByURL');
+          dispatcher.post('setCollection', [newColl, newDoc, '']);
+
+          return false;
+        }
+      };
+
      
       /* Automatically proceed from document to document */ 
       var autoPagingTimeout = null;
@@ -1586,6 +1640,10 @@ var VisualizerUI = (function($, window, undefined) {
           setupSearchTypes(response);
           // scroller at the top
           docScroll = 0;
+
+          corefMoveDir = 0;
+          corefFinished = false;
+          corefMap.clear();
         }
       };
 
@@ -1765,7 +1823,11 @@ var VisualizerUI = (function($, window, undefined) {
           $cmpButton.append($cmpLink);
           $cmpLink.button();
         }
-          
+         
+        // JESSY  
+        //var pos = currentSelectorPosition();
+        //$docName = $('#document_name input').val("Doc "+pos+" of "+(selectorData.items.length-1)+". Do not refresh this page.");
+        //console.log(selectorData.items);
         $docName = $('#document_name input').val(coll + doc);
         var docName = $docName[0];
         // TODO do this on resize, as well
@@ -1904,6 +1966,9 @@ var VisualizerUI = (function($, window, undefined) {
         showForm(aboutDialog);
       });
 
+      var fillCorefsAndShowForm = function() {
+      };
+
       // TODO: copy from annotator_ui; DRY it up
       var adjustFormToCursor = function(evt, element) {
         var screenHeight = $(window).height() - 8; // TODO HACK - no idea why -8 is needed
@@ -1914,12 +1979,216 @@ var VisualizerUI = (function($, window, undefined) {
         var x = Math.min(evt.clientX, screenWidth - elementWidth);
         element.css({ top: y, left: x });
       };
+
+      var corefMap = new Map();
+
+      var getCorefId = function(id1, id2) {
+        var firstId  = id1 < id2 ? id1 : id2;
+        var secondId = id1 < id2 ? id2 : id1;
+        var corefId = firstId + '-' + secondId;
+        return corefId;
+      };
+
+      var setCorefClosure = function(sourceId, targetId, checked) {
+        var corefClass = [];
+        var searchIds = [targetId];
+
+        while (searchIds.length > 0) {
+          var searchId = searchIds.pop();
+          corefClass.push(searchId);
+
+          for (var [corefId, val] of corefMap) {
+            var splitIds = corefId.split('-');
+            var id1 = splitIds[0];
+            var id2 = splitIds[1];
+            if (val) {
+              if (id1 == searchId && corefClass.indexOf(id2) == -1) { searchIds.push(id2); }
+              if (id2 == searchId && corefClass.indexOf(id1) == -1) { searchIds.push(id1); }
+            }
+          }
+        }
+
+        console.log('corefClasse = ' + corefClass);
+
+        if (checked) {
+          for (var id1 of corefClass) {
+            for (var id2 of corefClass) {
+              if (id1 != id2) {
+                var corefId = getCorefId(id1, id2);
+                if (!corefMap.get(corefId)) {
+                  console.log('Applying coref transitivity for ' + corefId);
+                  corefMap.set(corefId, true);
+                  if (id1 == sourceId || id2 == sourceId) {
+                    var changeEvt = new Event('change');
+                    var target = document.getElementById(corefId);
+                    target.checked = true;
+                    target.dispatchEvent(changeEvt);
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          for (var id of corefClass) {
+            if (id != sourceId) {
+              corefId = getCorefId(id, sourceId);
+              if (corefMap.get(corefId)) {
+                console.log('Severing coref transitivity for ' + corefId);
+                corefMap.set(corefId, false);
+                var changeEvt = new Event('change');
+                var target = document.getElementById(corefId);
+                target.checked = false;
+                target.dispatchEvent(changeEvt);
+              }
+            }
+          }
+        }
+      };
+
+      var setCorefPairButton = function(corefId) {
+        var $checkbox = $(document.getElementById(corefId));
+        var $widget = $checkbox.button('widget');
+        var $textspan = $widget.find('.ui-button-text');
+        $textspan.html(($checkbox[0].checked ? '&#x2611; ' : '&#x2610; ') + $widget.attr('data-bare'));
+      };
+
+      var onCorefPairChange = function(evt) {
+        if (evt.type == 'change') {
+          var corefId = evt.target.getAttribute('id');
+          var checked = evt.target.checked;
+
+          console.log('Caught change event for pair checkbox:' + corefId + ' checked:' + checked);
+
+          corefMap.set(corefId, checked);
+          var sourceId = evt.target.getAttribute('sourceId');
+          var targetId = evt.target.getAttribute('targetId');
+          setCorefClosure(sourceId, targetId, checked);
+          setCorefPairButton(corefId);
+        }
+      };
+
+      var hasPossibleRelation = function(type1, type2) {
+        return type1 == type2;
+      };
+
+      var hasPossibleCoref = function(type) {
+        if (type == 'Multiple_Categories' ||
+            type == 'Unknown' ||
+            type == 'Participants') {
+          console.log('Rejecting coref type (always): ' + type);
+          return false;
+        } else {
+          var nType = 0;
+          $.each(data.spans, function(spanNo, span) {
+            if (span.type == type) {
+              nType = nType + 1;
+            }
+          });
+          if (nType > 1) {
+            console.log('Accepting coref type: ' + type);
+            return true;
+          } else {
+            console.log('Rejecting coref type (#): ' + type);
+            return false;
+          }
+        }
+      };
+
+      var onCorefSpanChange = function(evt) {
+        for (var [id, val] of corefMap) {
+          console.log('coref ' + id + ' = ' + val);
+        }
+        if (evt.type == 'change') { // ignore the click event on the UI element
+          $('#corefs div.scroller').empty();
+          console.log('Caught change event for span checkbox', evt.target.getAttribute('id'));
+          var checked = evt.target.checked;
+          if (checked == true) {
+            var clickedSpan = data.spans[evt.target.getAttribute('value')];
+            var currentHtml = document.getElementById('header_' + clickedSpan.id);
+            if (currentHtml == null) {
+              var $top = $('#corefs div.scroller');
+              var $outerSpan = $('<span class="attribute_type_label" id="header_' + clickedSpan.id + '">' +
+                                 '' + '</span>').appendTo($top);
+              var $lastSpan = null;
+              $.each(data.spans, function(spanNo, span) {
+                if (clickedSpan.id != span.id && hasPossibleRelation(clickedSpan.type, span.type)) {
+                  var corefId = getCorefId(clickedSpan.id, span.id);
+                  var checked = !!corefMap.get(corefId);
+                  var $span = $('<span class="attribute_type_label"/>').appendTo($top);
+                  var $input = $('<input type="checkbox" id="'+ corefId +
+                                 '" sourceId="' + clickedSpan.id + 
+                                 '" targetId="' + span.id + 
+                                 '" category="' + span.generalType + '"/>');
+                  var $label = $('<label for="'+ corefId +
+                                 '" data-bare="' + span.text + '">' +
+                                 (checked ? '&#x2611; ' : '&#x2610; ') + 
+                                 span.text + '</label>');
+                  $span.append($input).append($label);
+                  $span.append($input).append($label);
+                  $input.button();
+                  $input.change(onCorefPairChange);
+
+                  if (!!corefMap.get(corefId)) {
+                    // go ahead and fire off a click for this pair
+                    var changeEvt = new Event('change');
+                    var target = document.getElementById(corefId);
+                    target.checked = true;
+                    target.dispatchEvent(changeEvt);
+                  }
+
+                  $lastSpan = $span
+                }
+              });
+              $lastSpan.append('<br />'); // BEN: added for visibility
+            }
+          } else {
+            evt.preventDefault();
+            evt.stopPropagation();
+            return false;
+          }
+        }
+      };
+      // BEN: oh god don't look at the code I don't know what I'm doing no judgment please
+      var fillAndDisplayCorefForm = function () {
+        console.log('starting coref, suppressing dir = ', corefMoveDir);
+        $('#corefs div.scroller').empty();
+        var $top = $('#span_texts div.scroller').empty();
+        dispatcher.post('showForm', [corefForm]);
+        $('#coref_form-ok').focus();
+        $.each(data.spans, function(spanNo, span) {
+          if (span.generalType == 'entity' && hasPossibleCoref(span.type)) {
+            var $span = $('<span class="attribute_type_label">' + '' + '</span>').appendTo($top);
+            var $input = $('<input type="radio" name="coref_top"/>').
+              attr('id', span.id).
+              attr('value', span.id). 
+              attr('category', span.type);
+            var $label = $('<label for="'+ span.id +
+                           '" data-bare="' + span.id + '">' + 
+                           span.text + '</label>');
+            $span.append($input).append($label);
+            //$span..append('<br />');
+            $input.button();
+            $input.change(onCorefSpanChange);
+          }
+        });
+      };
+
       var viewspanForm = $('#viewspan_form');
+      var corefForm = $('#coref_form');
       var onDblClick = function(evt) {
-        if (user && annotationAvailable) return;
         var target = $(evt.target);
-        var id;
-        if (id = target.attr('data-span-id')) {
+        var id = target.attr('data-span-id');
+        if (user && annotationAvailable) {
+          if (id) {
+            console.log('Short-circuiting dblClick evt');
+            return;
+          // If there is no target for the dblClick, do coreference
+          } else {
+            // BEN: if you want to do coref on dblClick instead of just doc change, do it here
+            //fillAndDisplayCorefForm();
+          }
+        }
+        if (id) {
           window.getSelection().removeAllRanges();
           var span = data.spans[id];
 
@@ -1940,6 +2209,7 @@ var VisualizerUI = (function($, window, undefined) {
         }
       };
       viewspanForm.submit(function(evt) {
+        console.log('calling viewspanForm submit');
         dispatcher.post('hideForm');
         return false;
       });
@@ -1948,8 +2218,11 @@ var VisualizerUI = (function($, window, undefined) {
       initForm(authForm, { resizable: false });
       var authFormSubmit = function(evt) {
         dispatcher.post('hideForm');
-        var _user = $('#auth_user').val();
-        var password = $('#auth_pass').val();
+        // var _user = $('#auth_user').val();
+        var _user = cur_guid; // JESSY
+        // var password = $('#auth_pass').val();
+        var password = cur_guid; // JESSY
+
         dispatcher.post('ajax', [{
             action: 'login',
             user: _user,
@@ -1967,9 +2240,31 @@ var VisualizerUI = (function($, window, undefined) {
                 $('.login').show();
                 dispatcher.post('user', [user]);
               }
-          }]);
+              dispatcher.post('user', [user]);
+	      console.log('LOGIN! user=', user);
+	      //BEN: for a random doc, call this:
+	      //initCollection(user);
+          },
+	  { keep: true }]);
         return false;
       };
+
+      // BEN: set up collection files and load the doc
+      var initCollection = function (user) {
+	dispatcher.post('ajax', [{
+	    action: 'init_collection',
+	    guid: user,
+	},
+	function(response) {
+          console.log('Loading coll = ', response.coll);
+	  var newColl = '/pico/'+coll;
+          dispatcher.post('allowReloadByURL');
+          var newArgs = [];
+          dispatcher.post('setCollection', [response.coll, response.doc, Util.deparam(newArgs.join('&'))]);
+	},
+	{ keep: true }]);
+      };
+
       $('#auth_button').click(function(evt) {
         if (user) {
           dispatcher.post('ajax', [{
@@ -1985,7 +2280,7 @@ var VisualizerUI = (function($, window, undefined) {
         }
       });
       authForm.submit(authFormSubmit);
-
+      authFormSubmit(); // JESSY authomatically login
 
       var tutorialForm = $('#tutorial');
       var isWebkit = 'WebkitAppearance' in document.documentElement.style;
@@ -2010,11 +2305,48 @@ var VisualizerUI = (function($, window, undefined) {
         }
       });
 
+      // BEN: new span coref form
+      var fillCorefAndDisplayForm = function(evt) {
+        $('#entity_coref_section').show();
+      };
+
+      var submitCoref = function(evt) {
+        dispatcher.post('hideForm');
+        console.log('Submitting coref form!');
+        corefStr = ''
+        for (var [corefId, value] of corefMap) {
+          if (value) {
+            if (corefStr) {
+              corefStr += ',';
+            }
+            corefStr += corefId;
+          }
+        }
+        console.log('corefStr: ', corefStr);
+
+	dispatcher.post('ajax', [{
+	    action: 'write_corefs',
+            guid: user,
+            coll: coll,
+            doc: doc,
+            corefs: corefStr,
+	}]);
+
+        corefFinished = true;
+        return false;
+      };
+
       var init = function() {
         dispatcher.post('initForm', [viewspanForm, {
             width: 760,
             no_cancel: true
           }]);
+        dispatcher.post('initForm', [corefForm, {
+            width: 760,
+            no_cancel: true
+          }]);
+        corefForm.submit(submitCoref);
+
         dispatcher.post('ajax', [{
             action: 'whoami'
           }, function(response) {
@@ -2269,6 +2601,9 @@ var VisualizerUI = (function($, window, undefined) {
       });
       $('#next').button().click(function() {
         return moveInFileBrowser(+1);
+      });
+      $('#coref_button').button().click(function() {
+        return fillAndDisplayCorefForm();
       });
       $('#footer').show();
 

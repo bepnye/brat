@@ -78,8 +78,11 @@ var Ajax = (function($, window, undefined) {
                 } else if (callback) {
                   $.extend(response, merge);
                   dispatcher.post(0, callback, [response]);
-                }
-              }
+                } else {
+		}
+              } else {
+		//console.log(data.action, ' is obsolete??');
+	      }
               dispatcher.post('unspin');
             },
             error: function(response, textStatus, errorThrown) {

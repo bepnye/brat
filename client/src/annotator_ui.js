@@ -239,6 +239,7 @@ var AnnotatorUI = (function($, window, undefined) {
             spanFormSubmit();
             dispatcher.post('logAction', ['spanLockEditSubmitted']);
           } else {
+            console.log('calling fillSpanTypes');
             fillSpanTypesAndDisplayForm(evt, editedSpan.text, editedSpan);
             // for precise timing, log annotation display to user.
             dispatcher.post('logAction', ['spanEditSelected']);
@@ -903,6 +904,7 @@ var AnnotatorUI = (function($, window, undefined) {
           
           // show attribute frames only if at least one attribute is
           // shown, and set size classes appropriately
+	  console.log('Setting up ', entityAttrCount, ' entityAttr and ', eventAttrCount, 'eventAttr');
           if (eventAttrCount > 0) {
             $('#event_attributes').show();
             $('#event_attribute_label').show();
@@ -1955,6 +1957,7 @@ var AnnotatorUI = (function($, window, undefined) {
             $select.combobox();
             $select.change(onMultiAttrChange);
           }
+          $span.append('<br />'); // BEN: added for visibility
         });
       }
 
@@ -2436,45 +2439,49 @@ var AnnotatorUI = (function($, window, undefined) {
       dispatcher.post('initForm', [spanForm, {
           alsoResize: '#entity_and_event_wrapper',
           width: 760,
-          buttons: [{
-              id: 'span_form_add_fragment',
-              text: "Add Frag.",
-              click: addFragment
-            }, {
-              id: 'span_form_delete',
-              text: "Delete",
-              click: deleteSpan
-            }, {
-              id: 'span_form_delete_fragment',
-              text: "Delete Frag.",
-              click: deleteFragment
-            }, {
-              id: 'span_form_reselect',
-              text: 'Move',
-              click: reselectSpan
-            }, {
-              id: 'span_form_reselect_fragment',
-              text: 'Move Frag.',
-              click: reselectFragment
-            }, {
-              id: 'span_form_split',
-              text: 'Split',
-              click: splitSpan
-            }
+          buttons: [
+	    {
+            //   id: 'span_form_add_fragment',
+            //   text: "Add Frag.",
+            //   click: addFragment
+            // }, {
+	      // BEN: disable deleting
+            id: 'span_form_delete',
+            text: "Delete",
+            click: deleteSpan
+            },
+            // {
+            //   id: 'span_form_delete_fragment',
+            //   text: "Delete Frag.",
+            //   click: deleteFragment
+            // }, {
+            //   id: 'span_form_reselect',
+            //   text: 'Move',
+            //   click: reselectSpan
+            // }, {
+            //   id: 'span_form_reselect_fragment',
+            //   text: 'Move Frag.',
+            //   click: reselectFragment
+            // }, {
+            //   id: 'span_form_split',
+            //   text: 'Split',
+            //   click: splitSpan
+            // }
           ],
           create: function(evt) {
             var $ok = $('#span_form-ok').wrap('<span id="span_form_lock_bset"/>');
             var $span = $ok.parent();
-            var $lock = $('<input id="span_form_lock" type="checkbox"/>').insertBefore($ok);
-            $('<label for="span_form_lock"/>').text("Lock type").insertBefore($ok);
-            $lock.button({
-              id: 'span_form_lock',
-              text: false,
-              icons: {
-                primary: 'ui-icon-unlocked'
-              },
-            });
-            $lock.click(spanChangeLock);
+            // JESSY removing lock
+            // var $lock = $('<input id="span_form_lock" type="checkbox"/>').insertBefore($ok);
+            // $('<label for="span_form_lock"/>').text("Lock type").insertBefore($ok);
+            // $lock.button({
+            //   id: 'span_form_lock',
+            //   text: false,
+            //   icons: {
+            //     primary: 'ui-icon-unlocked'
+            //   },
+            // });
+            // $lock.click(spanChangeLock);
             $($span).buttonset();
           },
           beforeClose: function(evt) {
@@ -2772,6 +2779,9 @@ var AnnotatorUI = (function($, window, undefined) {
         arcDragArc = arc;
       };
 
+      var doNothingLol = function() {
+      };
+
       dispatcher.
           on('init', init).
           on('arcDragArcDrawn', arcDragArcDrawn).
@@ -2790,6 +2800,7 @@ var AnnotatorUI = (function($, window, undefined) {
           on('isReloadOkay', isReloadOkay).
           on('keydown', onKeyDown).
           on('dblclick', onDblClick).
+          //on('dblclick', doNothingLol).
           on('dragstart', preventDefault).
           on('mousedown', onMouseDown).
           on('mouseup', onMouseUp).
