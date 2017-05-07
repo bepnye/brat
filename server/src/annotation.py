@@ -20,6 +20,7 @@ from itertools import chain, takewhile
 from os import close as os_close, utime
 from time import time
 from os.path import join as path_join
+from os.path import split as path_split
 from os.path import basename, splitext
 from re import match as re_match
 from re import compile as re_compile
@@ -30,7 +31,7 @@ from message import Messager
 
 ## JESSY get username
 from session import get_session
-from pico_semantics import init_collection, eprint
+from pico_semantics import init_ann, eprint
 
 ### Constants
 # The only suffix we allow to write to, which is the joined annotation file
@@ -299,11 +300,11 @@ class Annotations(object):
             # Our first attempts at finding the input by checking suffixes
             # failed, so we try to attach know suffixes to the path.
             # sugg_path = document + '.' + JOINED_ANN_FILE_SUFF
-            doc_path = document.strip('/').split('/')
-            doc_name = doc_path[-1]
-            coll_name = doc_path[-2]
-            init_collection(self.user, coll_name)
-            sugg_path = document + '.' + self.user + '.' + JOINED_ANN_FILE_SUFF ##JESSY add user to file path
+            #user = self.user
+            user = 'shared'
+            init_ann(path_split(document)[0], user)
+            eprint('Loading input files for %s in %s' %(user, document))
+            sugg_path = document + '.' + user + '.' + JOINED_ANN_FILE_SUFF ##JESSY add user to file path
             #sugg_path = document + '.' + JOINED_ANN_FILE_SUFF ##JESSY add user to file path
 
             if isfile(sugg_path):

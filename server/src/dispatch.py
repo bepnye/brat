@@ -37,7 +37,7 @@ from undo import undo
 from tag import tag
 from delete import delete_document, delete_collection
 from norm import norm_get_name, norm_search, norm_get_data
-from pico_semantics import init_collection, write_corefs 
+from pico_semantics import write_corefs, get_next_doc
 
 # no-op function that can be invoked by client to log a user action
 def logging_no_op(collection, document, log):
@@ -104,8 +104,8 @@ DISPATCHER = {
         'getConfiguration': get_configuration,
         'convert': convert,
 
-	'init_collection': init_collection,#BEN
 	'write_corefs': write_corefs,#BEN
+        'get_next_doc': get_next_doc,#BEN
        }
 
 # Actions that correspond to annotation functionality

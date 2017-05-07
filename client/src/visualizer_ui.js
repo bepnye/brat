@@ -1554,16 +1554,37 @@ var VisualizerUI = (function($, window, undefined) {
 
       var findNewPico = function(dir) {
         coll_pieces = coll.split('/');
-        doc_names = coll_pieces[2].split('_');
-        cur_pos = doc_names.indexOf(doc);
-        new_pos = cur_pos + dir;
-        if (new_pos >= 0 && new_pos <= 2) {
-          new_doc = doc_names[new_pos];
-          new_coll = coll_pieces.slice(0,-2).join('/') + '/' + new_doc + '/';
-        } else {
-          new_doc = doc;
-          new_coll = coll;
+        top_dir = coll_pieces.slice(-4,-3)[0];
+        hit_dir = coll_pieces.slice(-3,-2)[0];
+        console.log(top_dir + '|' + hit_dir + '|' + doc);
+        new_doc = doc;
+        new_coll = coll;
+        if (top_dir == 'HITs') {
+          doc_names = hit_dir.split('_');
+          cur_pos = doc_names.indexOf(doc);
+          new_pos = cur_pos + dir;
+          if (new_pos >= 0 && new_pos < doc_names.length) {
+            new_doc = doc_names[new_pos];
+            new_coll = coll_pieces.slice(0,-2).join('/') + '/' + new_doc + '/';
+          }
+        } else if (top_dir == 'seq') {
+          cur_pos = parseInt(doc);
+          max_pos = parseInt(hit_dir);
+          new_pos = cur_pos + dir;
+          if (new_pos >= 0 && new_pos < max_pos) {
+            new_doc = new_pos;
+            new_coll = coll_pieces.slice(0, -2).join('/') + '/' + new_pos + '/';
+          }
+        } else if (top_dir == 'RESULTS') {
+          var pos = currentSelectorPosition();
+          var newPos = pos + dir;
+          if (newPos >= 0 && newPos < selectorData.items.length &&
+            selectorData.items[newPos][0] != "c") {
+            new_doc = selectorData.items[newPos][2];
+          }
         }
+        console.log(doc, coll);
+        console.log(new_doc, new_coll);
         return [new_doc, new_coll];
       };
 
@@ -1574,26 +1595,25 @@ var VisualizerUI = (function($, window, undefined) {
           console.log('Time to do coref!');
           fillAndDisplayCorefForm();
           return false;
-        } else {
-
-          newPico = findNewPico(dir);
-
-          newDoc = newPico[0];
-          newColl = newPico[1];
-
-          if (newColl == coll) {
-            if (dir == 1) {
-              console.log('Reached end of collection');
-              submitTrigger();
-              return false;
-            }
-          }
-
-          dispatcher.post('allowReloadByURL');
-          dispatcher.post('setCollection', [newColl, newDoc, '']);
-
-          return false;
         }
+
+        newPico = findNewPico(dir);
+
+        newDoc = newPico[0];
+        newColl = newPico[1];
+
+        if (newColl == coll && newDoc == doc) {
+          if (dir == 1) {
+            console.log('Reached end of collection');
+            submitTrigger();
+            return false;
+          }
+        }
+
+        dispatcher.post('allowReloadByURL');
+        dispatcher.post('setCollection', [newColl, newDoc, '']);
+
+        return false;
       };
 
      
@@ -2249,18 +2269,13 @@ var VisualizerUI = (function($, window, undefined) {
         return false;
       };
 
-      // BEN: set up collection files and load the doc
-      var initCollection = function (user) {
+      var getNextDoc = function (collName) {
 	dispatcher.post('ajax', [{
-	    action: 'init_collection',
-	    guid: user,
+	    action: 'get_next_doc',
+	    coll: collName,
 	},
 	function(response) {
-          console.log('Loading coll = ', response.coll);
-	  var newColl = '/pico/'+coll;
-          dispatcher.post('allowReloadByURL');
-          var newArgs = [];
-          dispatcher.post('setCollection', [response.coll, response.doc, Util.deparam(newArgs.join('&'))]);
+          console.log('Fetching next doc = ', response.docName);
 	},
 	{ keep: true }]);
       };
