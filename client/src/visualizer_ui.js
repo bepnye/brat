@@ -477,6 +477,7 @@ var VisualizerUI = (function($, window, undefined) {
         corefMoveDir = 0;
         corefFinished = false;
         corefMap.clear();
+        meshMap.clear();
       };
 
       var displayArcComment = function(
@@ -2001,6 +2002,7 @@ var VisualizerUI = (function($, window, undefined) {
       };
 
       var corefMap = new Map();
+      var meshMap = new Map();
 
       var getCorefId = function(id1, id2) {
         var firstId  = id1 < id2 ? id1 : id2;
@@ -2084,11 +2086,71 @@ var VisualizerUI = (function($, window, undefined) {
           var targetId = evt.target.getAttribute('targetId');
           setCorefClosure(sourceId, targetId, checked);
           setCorefPairButton(corefId);
+
+          if (checked) {
+            var $button = $(document.getElementById(targetId));
+            var $span = $button.parent();
+            if ($span[0]) {
+              var $top = $('#span_texts div.scroller');
+              $top[0].removeChild($span[0]);
+            }
+          } else {
+            var span = data.spans[targetId];
+            var $top = $('#span_texts div.scroller');
+            addSpanButton($top, span);
+          }
+        }
+      };
+
+      var getMeshId = function(mesh, spanId) {
+        return spanId + '-' + mesh;
+      };
+
+      var setMeshButton = function(meshId) {
+        var $checkbox = $(document.getElementById(meshId));
+        var $widget = $checkbox.button('widget');
+        var $textspan = $widget.find('.ui-button-text');
+        $textspan.html(($checkbox[0].checked ? '&#x2611; ' : '&#x2610; ') + $widget.attr('data-bare'));
+      };
+      
+      var onCorefMeshChange = function(evt) {
+        if (evt.type == 'change') {
+          var meshId = evt.target.getAttribute('id');
+          var meshSplitIds = meshId.split('-');
+          var spanId = meshSplitIds[0];
+          var mesh = meshSplitIds[1];
+          var checked = evt.target.checked;
+          setMeshButton(meshId);
+          meshMap.set(meshId, checked);
+          for (var [corefId, val] of corefMap) {
+            var corefSplitIds = corefId.split('-');
+            var id1 = corefSplitIds[0];
+            var id2 = corefSplitIds[1];
+            var updateMeshId = null;
+            if (id1 == spanId) {
+              updateMeshId = getMeshId(mesh, id2);
+            } else if (id2 == spanId) {
+              updateMeshId = getMeshId(mesh, id1);
+            }
+            if (updateMeshId) {
+              meshMap.set(updateMeshId, checked);
+            }
+          }
         }
       };
 
       var hasPossibleRelation = function(type1, type2) {
         return type1 == type2;
+      };
+
+      var hasPossibleMesh = function(type) {
+        var ret = (type == 'Age' ||
+                  type == 'Gender' ||
+                  type == 'Condition' ||
+                  type == 'Number_of_participants' ||
+                  type == 'Participants')
+        console.log(type, ' has span = ', ret);
+        return ret;
       };
 
       var hasPossibleCoref = function(type) {
@@ -2098,13 +2160,15 @@ var VisualizerUI = (function($, window, undefined) {
           console.log('Rejecting coref type (always): ' + type);
           return false;
         } else {
+          // Outdated! Used to only want subspans if > 1 existed for matching,
+          // now need all of them for MeSH assignment
           var nType = 0;
           $.each(data.spans, function(spanNo, span) {
             if (span.type == type) {
               nType = nType + 1;
             }
           });
-          if (nType > 1) {
+          if (nType > 0) {
             console.log('Accepting coref type: ' + type);
             return true;
           } else {
@@ -2115,11 +2179,9 @@ var VisualizerUI = (function($, window, undefined) {
       };
 
       var onCorefSpanChange = function(evt) {
-        for (var [id, val] of corefMap) {
-          console.log('coref ' + id + ' = ' + val);
-        }
         if (evt.type == 'change') { // ignore the click event on the UI element
           $('#corefs div.scroller').empty();
+          $('#mesh div.scroller').empty();
           console.log('Caught change event for span checkbox', evt.target.getAttribute('id'));
           var checked = evt.target.checked;
           if (checked == true) {
@@ -2155,9 +2217,40 @@ var VisualizerUI = (function($, window, undefined) {
                     target.checked = true;
                     target.dispatchEvent(changeEvt);
                   }
-
                   $lastSpan = $span
                 }
+              });
+              if ($lastSpan) { // Possible to not have any matching subspans, and all that's left is the MeSH task
+                $lastSpan.append('<br />'); // BEN: added for visibility
+              }
+
+              $top = $('#mesh div.scroller');
+              $outerSpan = $('<span class="attribute_type_label" id="mesh_' + clickedSpan.id + '">' +
+                                 '' + '</span>').appendTo($top);
+              $.each(spanTypes['MeSH'].attributes, function(meshNo, mesh) {
+                var meshId = getMeshId(mesh, clickedSpan.id);
+                var checked = !!meshMap.get(meshId);
+                var $span = $('<span class="attribute_type_label"/>').appendTo($top);
+                var $input = $('<input type="checkbox" id="'+ meshId +
+                               '" category="mesh"/>');
+                var meshLabel = mesh.replace(/_/g, ' ');
+                var $label = $('<label for="'+ meshId +
+                               '" data-bare="' + meshLabel + '">' +
+                               (checked ? '&#x2611; ' : '&#x2610; ') + 
+                               meshLabel + '</label>');
+                $span.append($input).append($label);
+                $span.append($input).append($label);
+                $input.button();
+                $input.change(onCorefMeshChange);
+
+                if (!!meshMap.get(meshId)) {
+                  // go ahead and fire off a click for this pair
+                  var changeEvt = new Event('change');
+                  var target = document.getElementById(meshId);
+                  target.checked = true;
+                  target.dispatchEvent(changeEvt);
+                }
+                $lastSpan = $span
               });
               $lastSpan.append('<br />'); // BEN: added for visibility
             }
@@ -2168,27 +2261,33 @@ var VisualizerUI = (function($, window, undefined) {
           }
         }
       };
+
+      var addSpanButton = function($top, span) {
+        var $span = $('<span class="attribute_type_label">' + '' + '</span>').appendTo($top);
+        var $input = $('<input type="radio" name="coref_top"/>').
+          attr('id', span.id).
+          attr('value', span.id). 
+          attr('category', span.type);
+        var $label = $('<label for="'+ span.id +
+                       '" data-bare="' + span.id + '">' + 
+                       span.text + '</label>');
+        $span.append($input).append($label);
+        //$span..append('<br />');
+        $input.button();
+        $input.change(onCorefSpanChange);
+      };
+
       // BEN: oh god don't look at the code I don't know what I'm doing no judgment please
       var fillAndDisplayCorefForm = function () {
         console.log('starting coref, suppressing dir = ', corefMoveDir);
         $('#corefs div.scroller').empty();
+        $('#mesh div.scroller').empty();
         var $top = $('#span_texts div.scroller').empty();
         dispatcher.post('showForm', [corefForm]);
         $('#coref_form-ok').focus();
         $.each(data.spans, function(spanNo, span) {
           if (span.generalType == 'entity' && hasPossibleCoref(span.type)) {
-            var $span = $('<span class="attribute_type_label">' + '' + '</span>').appendTo($top);
-            var $input = $('<input type="radio" name="coref_top"/>').
-              attr('id', span.id).
-              attr('value', span.id). 
-              attr('category', span.type);
-            var $label = $('<label for="'+ span.id +
-                           '" data-bare="' + span.id + '">' + 
-                           span.text + '</label>');
-            $span.append($input).append($label);
-            //$span..append('<br />');
-            $input.button();
-            $input.change(onCorefSpanChange);
+            addSpanButton($top, span);
           }
         });
       };

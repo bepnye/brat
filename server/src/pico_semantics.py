@@ -9,6 +9,7 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 TOP = '/home/ubuntu/pico/'
+ANN_SRC = 'participants'
 TASKS = ['participants', 'interventions', 'outcomes']
 
 def parse_ann(fname, txt):
@@ -74,7 +75,7 @@ def init_ann(doc_path, user):
     eprint('Found existing ann for %s in %s (%s)' %(user, doc_path, user_ann))
   else:
     pmid = open('%s/pmid.info' %(doc_path)).read().strip()
-    ann_file = '%s/resources/ann/participants/%s.ann' %(TOP, pmid)
+    ann_file = '%s/resources/ann/%s/%s.ann' %(TOP, ANN_SRC, pmid)
     eprint('Creating new ann for %s in %s' %(user, doc_path))
     os.system('cp %s %s' %(ann_file, user_ann))
 
@@ -101,7 +102,7 @@ def init_doc(DOC_TOP, pmid, bid):
           if m.strip() not in ['Male', 'Female', 'Humans', \
                 'Infant', 'Child, Preschool', 'Child', 'Adolescent', 'Young Adult', \
                 'Adult', 'Middle Aged', 'Aged', 'Aged, 80 and over']:
-            conf_fp.write('%s Arg:<ENTITY>\n' %(m.strip().replace(' ', '_').replace(',', '')))
+            conf_fp.write('%s Arg:MeSH\n' %(m.strip().replace(' ', '_').replace(',', '')))
 
   init_ann(DOC_TOP, 'shared')
 

@@ -1859,7 +1859,7 @@ var AnnotatorUI = (function($, window, undefined) {
         if (!types) return;
 
         $.each(types, function(typeNo, type) {
-          if (type === null) {
+          if (type === null || type.name == 'MeSH') {
             $parent.append('<hr/>');
           } else {
             var name = type.name;
@@ -1874,7 +1874,7 @@ var AnnotatorUI = (function($, window, undefined) {
             spanBgColor = Util.adjustColorLightness(spanBgColor, spanBoxTextBgColorLighten);
             var $label = $('<label class="span_type_label"/>').
               attr('for', 'span_' + type.type).
-              text(name);
+              text(name.replace(/_/g, ' '));
             if (type.unused) {
               $input.attr({
                 disabled: 'disabled',
@@ -1932,7 +1932,8 @@ var AnnotatorUI = (function($, window, undefined) {
           if (attr.unused) {
             $('<input type="hidden" id="'+attrId+'" value=""/>').appendTo($span);
           } else if (attr.bool) {
-            var escapedName = Util.escapeQuotes(attr.name);
+            console.log(attr.name);
+            var escapedName = Util.escapeQuotes(attr.name).replace(/_/g, ' ');
             var $input = $('<input type="checkbox" id="'+attrId+
                            '" value="' + escapedType + 
                            '" category="' + category + '"/>');
