@@ -1553,20 +1553,28 @@ var VisualizerUI = (function($, window, undefined) {
         if (curPicoColl.includes(pico3)) { return curPicoColl.replace(pico3, pico2); }
       };
 
-      var findNewPico = function(dir) {
-        coll_pieces = coll.split('/');
+      var loadNewPico = function(dir) {
+        coll_pieces = coll.replace('//', '/').split('/');
         top_dir = coll_pieces.slice(-4,-3)[0];
         hit_dir = coll_pieces.slice(-3,-2)[0];
         console.log(top_dir + '|' + hit_dir + '|' + doc);
         new_doc = doc;
         new_coll = coll;
-        if (top_dir == 'HITs') {
+        if (top_dir == 'PICO') {
+          console.log(doc, dir);
+          getNextDoc(doc, dir);
+        } else if (top_dir == 'HITs') {
           doc_names = hit_dir.split('_');
           cur_pos = doc_names.indexOf(doc);
           new_pos = cur_pos + dir;
-          if (new_pos >= 0 && new_pos < doc_names.length) {
-            new_doc = doc_names[new_pos];
+          if (new_pos < 0) {
+            console.log('Already at beginning of HIT');
+          } else {
+            if (new_pos < doc_names.length) {
+              new_doc = doc_names[new_pos];
+            }
             new_coll = coll_pieces.slice(0,-2).join('/') + '/' + new_doc + '/';
+            loadNewDoc(new_doc, new_coll, dir);
           }
         } else if (top_dir == 'seq') {
           cur_pos = parseInt(doc);
@@ -1575,45 +1583,35 @@ var VisualizerUI = (function($, window, undefined) {
           if (new_pos >= 0 && new_pos < max_pos) {
             new_doc = new_pos;
             new_coll = coll_pieces.slice(0, -2).join('/') + '/' + new_pos + '/';
-          }
-        } else if (top_dir == 'RESULTS') {
-          var pos = currentSelectorPosition();
-          var newPos = pos + dir;
-          if (newPos >= 0 && newPos < selectorData.items.length &&
-            selectorData.items[newPos][0] != "c") {
-            new_doc = selectorData.items[newPos][2];
+            loadNewDoc(new_doc, new_coll, dir);
           }
         }
-        console.log(doc, coll);
-        console.log(new_doc, new_coll);
-        return [new_doc, new_coll];
+        return false;
+      };
+
+      var loadNewDoc = function(newDoc, newColl, dir) {
+        console.log('doc: ', doc, ' => ', newDoc);
+        console.log('coll: ', coll, ' => ', newColl);
+        if (newColl == coll && newDoc == doc && dir == 1) {
+          console.log('Reached end of collection');
+          submitTrigger();
+          return false;
+        }
+
+        dispatcher.post('allowReloadByURL');
+        dispatcher.post('setCollection', [newColl, newDoc, '']);
+        return false;
       };
 
       var moveInFileBrowser = function(dir) {
         if (corefFinished == false) {
           // BEN: pop up the coref form before leaving the current document
           corefMoveDir = dir;
-          console.log('Time to do coref!');
           fillAndDisplayCorefForm();
           return false;
         }
 
-        newPico = findNewPico(dir);
-
-        newDoc = newPico[0];
-        newColl = newPico[1];
-
-        if (newColl == coll && newDoc == doc) {
-          if (dir == 1) {
-            console.log('Reached end of collection');
-            submitTrigger();
-            return false;
-          }
-        }
-
-        dispatcher.post('allowReloadByURL');
-        dispatcher.post('setCollection', [newColl, newDoc, '']);
-
+        loadNewPico(dir);
         return false;
       };
 
@@ -1734,6 +1732,10 @@ var VisualizerUI = (function($, window, undefined) {
         dispatcher.post('allowReloadByURL');
         if (!currentForm) {
           $('#waiter').dialog('close');
+        }
+        if (user == null)
+        {
+          dispatcher.post('showForm', [authForm]);
         }
       }
 
@@ -2004,6 +2006,31 @@ var VisualizerUI = (function($, window, undefined) {
       var corefMap = new Map();
       var meshMap = new Map();
 
+      var addMapValue = function(k, v, m) {
+        console.log('Adding ' + v + ' to ' + k);
+        if (m.get(k) == undefined) { 
+          console.log('Initializing ' + k);
+          m.set(k, []);
+        }
+        if (m.get(k).indexOf(v) < 0) {
+          m.get(k).push(v);
+        }
+      };
+
+      var removeMapValue = function(k, v, m) {
+        console.log('Removing ' + v + ' from ' + k);
+        if (m.get(k) != undefined) {
+          var idx = m.get(k).indexOf(v);
+          if (idx >= 0) {
+            m.get(k).splice(idx, 1);
+          }
+        }
+      };
+
+      var getMapValue = function(k, m) {
+        return m.get(k) || []; 
+      };
+
       var getCorefId = function(id1, id2) {
         var firstId  = id1 < id2 ? id1 : id2;
         var secondId = id1 < id2 ? id2 : id1;
@@ -2011,67 +2038,52 @@ var VisualizerUI = (function($, window, undefined) {
         return corefId;
       };
 
-      var setCorefClosure = function(sourceId, targetId, checked) {
-        var corefClass = [];
-        var searchIds = [targetId];
+      var getCorefSpans = function(k) {
+        return getMapValue(k, corefMap)
+      };
 
-        while (searchIds.length > 0) {
-          var searchId = searchIds.pop();
-          corefClass.push(searchId);
+      var onMeshChange = function(evt) {
+        if (evt.type == 'change') {
+          var buttonId = evt.target.getAttribute('id');
+          var spanId = evt.target.getAttribute('span-id');
+          var meshId = evt.target.getAttribute('mesh-id');
+          var checked = evt.target.checked;
 
-          for (var [corefId, val] of corefMap) {
-            var splitIds = corefId.split('-');
-            var id1 = splitIds[0];
-            var id2 = splitIds[1];
-            if (val) {
-              if (id1 == searchId && corefClass.indexOf(id2) == -1) { searchIds.push(id2); }
-              if (id2 == searchId && corefClass.indexOf(id1) == -1) { searchIds.push(id1); }
+          var equivIds = getCorefSpans(spanId).concat([spanId]);
+          for (var i = 0; i < equivIds.length; i++) {
+            if (checked) {
+              addMapValue(equivIds[i], meshId, meshMap);
+            } else {
+              removeMapValue(equivIds[i], meshId, meshMap);
             }
-          }
-        }
-
-        console.log('corefClasse = ' + corefClass);
-
-        if (checked) {
-          for (var id1 of corefClass) {
-            for (var id2 of corefClass) {
-              if (id1 != id2) {
-                var corefId = getCorefId(id1, id2);
-                if (!corefMap.get(corefId)) {
-                  console.log('Applying coref transitivity for ' + corefId);
-                  corefMap.set(corefId, true);
-                  if (id1 == sourceId || id2 == sourceId) {
-                    var changeEvt = new Event('change');
-                    var target = document.getElementById(corefId);
-                    target.checked = true;
-                    target.dispatchEvent(changeEvt);
-                  }
-                }
-              }
-            }
-          }
-        } else {
-          for (var id of corefClass) {
-            if (id != sourceId) {
-              corefId = getCorefId(id, sourceId);
-              if (corefMap.get(corefId)) {
-                console.log('Severing coref transitivity for ' + corefId);
-                corefMap.set(corefId, false);
-                var changeEvt = new Event('change');
-                var target = document.getElementById(corefId);
-                target.checked = false;
-                target.dispatchEvent(changeEvt);
-              }
-            }
+            setCheckboxText(buttonId);
           }
         }
       };
 
-      var setCorefPairButton = function(corefId) {
-        var $checkbox = $(document.getElementById(corefId));
+      var setCheckboxText = function(buttonId) {
+        var $checkbox = $(document.getElementById(buttonId));
         var $widget = $checkbox.button('widget');
         var $textspan = $widget.find('.ui-button-text');
-        $textspan.html(($checkbox[0].checked ? '&#x2611; ' : '&#x2610; ') + $widget.attr('data-bare'));
+        $textspan.html(($checkbox[0].checked ? '&#x2611; ' : '&#x2610; ') + $widget.attr('label-text'));
+      };
+
+      var setCorefClosure = function(sourceId, targetId, checked) {
+        var corefs = getCorefSpans(sourceId).concat([sourceId]);
+        for (var i = 0; i < corefs.length; i++) {
+          var corefId = corefs[i];
+          if (corefId != targetId)
+          {
+            if (checked) {
+              addMapValue(corefs[i], targetId, corefMap);
+              addMapValue(targetId, corefs[i], corefMap);
+            } else {
+              removeMapValue(corefs[i], targetId, corefMap);
+              removeMapValue(targetId, corefs[i], corefMap);
+            }
+          }
+        }
+        console.log(corefMap);
       };
 
       var onCorefPairChange = function(evt) {
@@ -2081,11 +2093,10 @@ var VisualizerUI = (function($, window, undefined) {
 
           console.log('Caught change event for pair checkbox:' + corefId + ' checked:' + checked);
 
-          corefMap.set(corefId, checked);
           var sourceId = evt.target.getAttribute('sourceId');
           var targetId = evt.target.getAttribute('targetId');
           setCorefClosure(sourceId, targetId, checked);
-          setCorefPairButton(corefId);
+          setCheckboxText(corefId);
 
           if (checked) {
             var $button = $(document.getElementById(targetId));
@@ -2097,60 +2108,13 @@ var VisualizerUI = (function($, window, undefined) {
           } else {
             var span = data.spans[targetId];
             var $top = $('#span_texts div.scroller');
-            addSpanButton($top, span);
-          }
-        }
-      };
-
-      var getMeshId = function(mesh, spanId) {
-        return spanId + '-' + mesh;
-      };
-
-      var setMeshButton = function(meshId) {
-        var $checkbox = $(document.getElementById(meshId));
-        var $widget = $checkbox.button('widget');
-        var $textspan = $widget.find('.ui-button-text');
-        $textspan.html(($checkbox[0].checked ? '&#x2611; ' : '&#x2610; ') + $widget.attr('data-bare'));
-      };
-      
-      var onCorefMeshChange = function(evt) {
-        if (evt.type == 'change') {
-          var meshId = evt.target.getAttribute('id');
-          var meshSplitIds = meshId.split('-');
-          var spanId = meshSplitIds[0];
-          var mesh = meshSplitIds[1];
-          var checked = evt.target.checked;
-          setMeshButton(meshId);
-          meshMap.set(meshId, checked);
-          for (var [corefId, val] of corefMap) {
-            var corefSplitIds = corefId.split('-');
-            var id1 = corefSplitIds[0];
-            var id2 = corefSplitIds[1];
-            var updateMeshId = null;
-            if (id1 == spanId) {
-              updateMeshId = getMeshId(mesh, id2);
-            } else if (id2 == spanId) {
-              updateMeshId = getMeshId(mesh, id1);
-            }
-            if (updateMeshId) {
-              meshMap.set(updateMeshId, checked);
-            }
+            addSpanButton($top, span, false);
           }
         }
       };
 
       var hasPossibleRelation = function(type1, type2) {
         return type1 == type2;
-      };
-
-      var hasPossibleMesh = function(type) {
-        var ret = (type == 'Age' ||
-                  type == 'Gender' ||
-                  type == 'Condition' ||
-                  type == 'Number_of_participants' ||
-                  type == 'Participants')
-        console.log(type, ' has span = ', ret);
-        return ret;
       };
 
       var hasPossibleCoref = function(type) {
@@ -2169,23 +2133,41 @@ var VisualizerUI = (function($, window, undefined) {
             }
           });
           if (nType > 0) {
-            console.log('Accepting coref type: ' + type);
+            //console.log('Accepting coref type: ' + type);
             return true;
           } else {
-            console.log('Rejecting coref type (#): ' + type);
+            //console.log('Rejecting coref type (#): ' + type);
             return false;
           }
         }
       };
 
+      var getDocText = function(i, f) {
+        i = Math.max(i, 0);
+        f = Math.min(f, data.text.length);
+        return data.text.slice(i, f);
+      };
+
+      var bracketAndUpper = function(str) {
+        return '[' + str.toUpperCase() + ']';
+      };
+
+      var getSpanContext = function(span, n, spanFormatter) {
+        return getDocText(span.wholeFrom - n, span.wholeFrom) +
+               spanFormatter(span.text) +
+               getDocText(span.wholeTo, span.wholeTo + n);
+      };
+
       var onCorefSpanChange = function(evt) {
+        console.log(corefMap);
         if (evt.type == 'change') { // ignore the click event on the UI element
           $('#corefs div.scroller').empty();
-          $('#mesh div.scroller').empty();
           console.log('Caught change event for span checkbox', evt.target.getAttribute('id'));
           var checked = evt.target.checked;
           if (checked == true) {
             var clickedSpan = data.spans[evt.target.getAttribute('value')];
+            var currentLabel = document.getElementById('span_texts_label');
+            currentLabel.innerText = 'Original snippet: ' + '...' + getSpanContext(clickedSpan, 15, bracketAndUpper) + '...';
             var currentHtml = document.getElementById('header_' + clickedSpan.id);
             if (currentHtml == null) {
               var $top = $('#corefs div.scroller');
@@ -2193,66 +2175,42 @@ var VisualizerUI = (function($, window, undefined) {
                                  '' + '</span>').appendTo($top);
               var $lastSpan = null;
               $.each(data.spans, function(spanNo, span) {
-                if (clickedSpan.id != span.id && hasPossibleRelation(clickedSpan.type, span.type)) {
+                if (clickedSpan.id != span.id &&
+                    hasPossibleRelation(clickedSpan.type, span.type)) {
                   var corefId = getCorefId(clickedSpan.id, span.id);
-                  var checked = !!corefMap.get(corefId);
-                  var $span = $('<span class="attribute_type_label"/>').appendTo($top);
-                  var $input = $('<input type="checkbox" id="'+ corefId +
-                                 '" sourceId="' + clickedSpan.id + 
-                                 '" targetId="' + span.id + 
-                                 '" category="' + span.generalType + '"/>');
-                  var $label = $('<label for="'+ corefId +
-                                 '" data-bare="' + span.text + '">' +
-                                 (checked ? '&#x2611; ' : '&#x2610; ') + 
-                                 span.text + '</label>');
-                  $span.append($input).append($label);
-                  $span.append($input).append($label);
-                  $input.button();
-                  $input.change(onCorefPairChange);
+                  var spanCorefs = getCorefSpans(span.id);
+                  var checked = (spanCorefs.indexOf(clickedSpan.id) >= 0);
+                  if (spanCorefs.length == 0 || checked) {
+                    var $span = $('<span class="attribute_type_label"/>').appendTo($top);
+                    var $input = $('<input type="checkbox" id="'+ corefId +
+                                   '" sourceId="' + clickedSpan.id + 
+                                   '" targetId="' + span.id + 
+                                   '" category="' + span.generalType + '"/>');
+                    var labelText = getSpanContext(span, 15, bracketAndUpper);
+                    var $label = $('<label for="'+ corefId + '" ' +
+                                   'data-bare="' + span.text + '" ' +
+                                   'label-text="' + labelText + '">' +
+                                   (checked ? '&#x2611; ' : '&#x2610; ') + 
+                                   labelText + '</label>');
+                    $span.append($input).append($label);
+                    //$span.append('<br />');
+                    $input.button();
+                    $input.change(onCorefPairChange);
 
-                  if (!!corefMap.get(corefId)) {
-                    // go ahead and fire off a click for this pair
-                    var changeEvt = new Event('change');
-                    var target = document.getElementById(corefId);
-                    target.checked = true;
-                    target.dispatchEvent(changeEvt);
+                    $lastSpan = $span
+
+                    if (checked) {
+                      var changeEvt = new Event('change');
+                      var target = document.getElementById(corefId);
+                      target.checked = true;
+                      target.dispatchEvent(changeEvt);
+                    }
                   }
-                  $lastSpan = $span
                 }
               });
               if ($lastSpan) { // Possible to not have any matching subspans, and all that's left is the MeSH task
                 $lastSpan.append('<br />'); // BEN: added for visibility
               }
-
-              $top = $('#mesh div.scroller');
-              $outerSpan = $('<span class="attribute_type_label" id="mesh_' + clickedSpan.id + '">' +
-                                 '' + '</span>').appendTo($top);
-              $.each(spanTypes['MeSH'].attributes, function(meshNo, mesh) {
-                var meshId = getMeshId(mesh, clickedSpan.id);
-                var checked = !!meshMap.get(meshId);
-                var $span = $('<span class="attribute_type_label"/>').appendTo($top);
-                var $input = $('<input type="checkbox" id="'+ meshId +
-                               '" category="mesh"/>');
-                var meshLabel = mesh.replace(/_/g, ' ');
-                var $label = $('<label for="'+ meshId +
-                               '" data-bare="' + meshLabel + '">' +
-                               (checked ? '&#x2611; ' : '&#x2610; ') + 
-                               meshLabel + '</label>');
-                $span.append($input).append($label);
-                $span.append($input).append($label);
-                $input.button();
-                $input.change(onCorefMeshChange);
-
-                if (!!meshMap.get(meshId)) {
-                  // go ahead and fire off a click for this pair
-                  var changeEvt = new Event('change');
-                  var target = document.getElementById(meshId);
-                  target.checked = true;
-                  target.dispatchEvent(changeEvt);
-                }
-                $lastSpan = $span
-              });
-              $lastSpan.append('<br />'); // BEN: added for visibility
             }
           } else {
             evt.preventDefault();
@@ -2262,7 +2220,69 @@ var VisualizerUI = (function($, window, undefined) {
         }
       };
 
-      var addSpanButton = function($top, span) {
+      var onEquivClassChange = function(evt) {
+        if (evt.type == 'change') { // ignore the click event on the UI element
+          $('#equiv_spans div.scroller').empty();
+          $('#mesh div.scroller').empty();
+          console.log('Caught change event for equiv checkbox', evt.target.getAttribute('id'));
+          var checked = evt.target.checked;
+          if (checked == true) {
+            var clickedSpan = data.spans[evt.target.getAttribute('value')];
+            var currentLabel = document.getElementById('equiv_classes_label');
+            //currentLabel.innerText = 'Original snippet: ' + '...' + getSpanContext(clickedSpan, 15, bracketAndUpper) + '...';
+
+            var $top = $('#equiv_spans div.scroller');
+            var equivSpans = [clickedSpan.id] + getCorefSpans(clickedSpan.id);
+            $.each(data.spans, function(spanNo, span) {
+              if (equivSpans.indexOf(span.id) >= 0) {
+                var $span = $('<span class="attribute_type_label"/>').appendTo($top);
+                var labelText = getSpanContext(span, 15, bracketAndUpper);
+                var $label = $('<label for="'+ span.id + '" ' +
+                               'data-bare="' + span.text + '" ' +
+                               'label-text="' + labelText + '">' +
+                               labelText + '</label>');
+                $span.append($label);
+                $span.append('<br />');
+                $span.append('<br />');
+              }
+            });
+
+            var $top = $('#mesh div.scroller');
+            $.each(spanTypes.MeSH.attributes, function(meshNo, mesh) {
+              var checked = (getMapValue(clickedSpan.id, meshMap).indexOf(mesh) >= 0);
+              var meshId = clickedSpan.id + '_' + mesh;
+              var $span = $('<span class="attribute_type_label"/>').appendTo($top);
+              var $input = $('<input type="checkbox" id="'+ meshId + '" ' +
+                             'mesh-id="' + mesh + '" ' +
+                             'span-id="' + clickedSpan.id + '" ' +
+                             'category="' + clickedSpan.generalType + '"/>');
+              var labelText = mesh;
+              var $label = $('<label for="'+ meshId + '" ' +
+                             'data-bare="' + mesh + '" ' +
+                             'label-text="' + labelText + '">' +
+                             (checked ? '&#x2611; ' : '&#x2610; ') + 
+                             labelText + '</label>');
+              $span.append($input).append($label);
+              $input.button();
+              $input.change(onMeshChange);
+
+              if (checked) {
+                var changeEvt = new Event('change');
+                var target = document.getElementById(meshId);
+                target.checked = true;
+                target.dispatchEvent(changeEvt);
+              }
+            });
+
+          } else {
+            evt.preventDefault();
+            evt.stopPropagation();
+            return false;
+          }
+        }
+      };
+
+      var addSpanButton = function($top, span, add_br) {
         var $span = $('<span class="attribute_type_label">' + '' + '</span>').appendTo($top);
         var $input = $('<input type="radio" name="coref_top"/>').
           attr('id', span.id).
@@ -2272,28 +2292,74 @@ var VisualizerUI = (function($, window, undefined) {
                        '" data-bare="' + span.id + '">' + 
                        span.text + '</label>');
         $span.append($input).append($label);
-        //$span..append('<br />');
+        if (add_br) {
+          $span.append('<br />');
+        }
         $input.button();
         $input.change(onCorefSpanChange);
       };
 
       // BEN: oh god don't look at the code I don't know what I'm doing no judgment please
       var fillAndDisplayCorefForm = function () {
+        console.log(data);
+        $.each(data.spans, function(spanNo, span) {
+          if (span.comment && span.comment['text'].indexOf('cannot contain') >= 0) {
+            console.log(spanOptions);
+          }
+        });
         console.log('starting coref, suppressing dir = ', corefMoveDir);
         $('#corefs div.scroller').empty();
-        $('#mesh div.scroller').empty();
+        //$('#mesh div.scroller').empty();
         var $top = $('#span_texts div.scroller').empty();
         dispatcher.post('showForm', [corefForm]);
         $('#coref_form-ok').focus();
         $.each(data.spans, function(spanNo, span) {
           if (span.generalType == 'entity' && hasPossibleCoref(span.type)) {
-            addSpanButton($top, span);
+            addSpanButton($top, span, false);
+          }
+        });
+      };
+
+      var fillAndDisplayMeshForm = function () {
+        $('#mesh div.scroller').empty();
+        dispatcher.post('showForm', [meshForm]);
+        var $top = $('#equiv_classes div.scroller').empty();
+        $('#mesh_form-ok').focus();
+
+        var buttonIds = [];
+        $.each(data.spans, function(spanNo, span) {
+          console.log('Checking: ' + span.id);
+          var newId = true;
+          for (var i = 0; i < buttonIds.length; i++) {
+            var buttonId = buttonIds[i];
+            console.log('Checking against: ', buttonId);
+            var corefs = getCorefSpans(buttonId);
+            if (corefs.indexOf(span.id) >= 0) {
+              newId = false;
+              break;
+            }
+          }
+          if (newId) {
+            buttonIds.push(span.id);
+            var $span = $('<span class="attribute_type_label">' + '' + '</span>').appendTo($top);
+            var spanId = span.id + '_mesh';
+            var $input = $('<input type="radio" name="mesh_top"/>').
+              attr('id', spanId).
+              attr('value', span.id). 
+              attr('category', span.type);
+            var $label = $('<label for="'+ spanId +
+                           '" data-bare="' + spanId + '">' + 
+                           span.text + '</label>');
+            $span.append($input).append($label);
+            $input.button();
+            $input.change(onEquivClassChange);
           }
         });
       };
 
       var viewspanForm = $('#viewspan_form');
       var corefForm = $('#coref_form');
+      var meshForm = $('#mesh_form');
       var onDblClick = function(evt) {
         var target = $(evt.target);
         var id = target.attr('data-span-id');
@@ -2337,10 +2403,12 @@ var VisualizerUI = (function($, window, undefined) {
       initForm(authForm, { resizable: false });
       var authFormSubmit = function(evt) {
         dispatcher.post('hideForm');
-        // var _user = $('#auth_user').val();
-        var _user = cur_guid; // JESSY
-        // var password = $('#auth_pass').val();
-        var password = cur_guid; // JESSY
+        var _user = $('#auth_user').val();
+        //var password = $('#auth_pass').val();
+        //if (password == '') {
+        //  password = 'default_pw';
+        //}
+        var password = 'passwordsAreOverrated';
 
         dispatcher.post('ajax', [{
             action: 'login',
@@ -2352,29 +2420,42 @@ var VisualizerUI = (function($, window, undefined) {
                 dispatcher.post('showForm', [authForm]);
                 $('#auth_user').select().focus();
               } else {
+                console.log('LOGIN! user=', _user, ' pw=', password);
                 user = _user;
                 $('#auth_button').val('Logout ' + user);
                 $('#auth_user').val('');
-                $('#auth_pass').val('');
+                //$('#auth_pass').val('');
                 $('.login').show();
                 dispatcher.post('user', [user]);
+
+                // BEN: gotta reload the collection so we get the user-specific filename for the .ann file
+                if (coll && doc) {
+                  console.log('RELOAD! user=', user, ' coll=', coll, ' doc=', doc);
+                  dispatcher.post('allowReloadByURL');
+                  dispatcher.post('setCollection', [coll, doc, '']);
+                }
               }
-              dispatcher.post('user', [user]);
-	      console.log('LOGIN! user=', user);
-	      //BEN: for a random doc, call this:
-	      //initCollection(user);
           },
 	  { keep: true }]);
+
         return false;
       };
 
-      var getNextDoc = function (collName) {
+      var getNextDoc = function (curDocName, dir) {
 	dispatcher.post('ajax', [{
 	    action: 'get_next_doc',
-	    coll: collName,
+	    doc: curDocName,
+            direction: dir,
 	},
 	function(response) {
           console.log('Fetching next doc = ', response.docName);
+          console.log(response);
+          if (response.exception) {
+          } else {
+            newDoc = response.docName;
+            newColl = coll.replace(curDocName, newDoc);
+            loadNewDoc(newDoc, newColl, dir);
+          }
 	},
 	{ keep: true }]);
       };
@@ -2394,7 +2475,7 @@ var VisualizerUI = (function($, window, undefined) {
         }
       });
       authForm.submit(authFormSubmit);
-      authFormSubmit(); // JESSY authomatically login
+      //authFormSubmit(); // JESSY authomatically login // BEN not anymore!
 
       var tutorialForm = $('#tutorial');
       var isWebkit = 'WebkitAppearance' in document.documentElement.style;
@@ -2427,24 +2508,44 @@ var VisualizerUI = (function($, window, undefined) {
       var submitCoref = function(evt) {
         dispatcher.post('hideForm');
         console.log('Submitting coref form!');
-        corefStr = ''
+
+        var corefStr = 'corefs,'
         for (var [corefId, value] of corefMap) {
           if (value) {
-            if (corefStr) {
-              corefStr += ',';
-            }
-            corefStr += corefId;
+            corefStr += '('+corefId+','+value+'),';
           }
         }
-        console.log('corefStr: ', corefStr);
 
-	dispatcher.post('ajax', [{
-	    action: 'write_corefs',
-            guid: user,
-            coll: coll,
-            doc: doc,
-            corefs: corefStr,
-	}]);
+      	dispatcher.post('ajax', [{
+      	    action: 'write_corefs',
+                  guid: user,
+                  coll: coll,
+                  doc: doc,
+                  corefs: corefStr,
+      	}]);
+
+        fillAndDisplayMeshForm();
+        return false;
+      };
+
+      var submitMesh = function() {
+        dispatcher.post('hideForm');
+        console.log('Submitting mesh form!');
+
+        var meshStr = 'mesh,'
+        for (var [meshId, value] of meshMap) {
+          if (value) {
+            meshStr += '('+meshId+':,'+value+'),';
+          }
+        }
+
+        dispatcher.post('ajax', [{
+            action: 'write_mesh',
+                  guid: user,
+                  coll: coll,
+                  doc: doc,
+                  mesh: meshStr,
+        }]);
 
         corefFinished = true;
         return false;
@@ -2455,11 +2556,18 @@ var VisualizerUI = (function($, window, undefined) {
             width: 760,
             no_cancel: true
           }]);
+        
         dispatcher.post('initForm', [corefForm, {
             width: 760,
             no_cancel: true
           }]);
         corefForm.submit(submitCoref);
+
+        dispatcher.post('initForm', [meshForm, {
+            width: 760,
+            no_cancel: true
+          }]);
+        meshForm.submit(submitMesh);
 
         dispatcher.post('ajax', [{
             action: 'whoami'
@@ -2717,7 +2825,7 @@ var VisualizerUI = (function($, window, undefined) {
         return moveInFileBrowser(+1);
       });
       $('#coref_button').button().click(function() {
-        return fillAndDisplayCorefForm();
+        return fillAndDisplayMeshForm();
       });
       $('#footer').show();
 
@@ -2743,6 +2851,7 @@ var VisualizerUI = (function($, window, undefined) {
 
       dispatcher.
           on('init', init).
+          on('getNextDoc', getNextDoc).
           on('dataReady', rememberData).
           on('annotationIsAvailable', annotationIsAvailable).
           on('messages', displayMessages).

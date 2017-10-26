@@ -247,23 +247,39 @@ input.invalid_value {
   display: inline-block;
   vertical-align: top;
 }
-.split_wrapper div.scroll_wrapper_middle_coref {
-  width: 100%;
-  height: 40%;
-  display: inline-block;
-  vertical-align: center;
-}
 .split_wrapper div.scroll_wrapper_lower_coref {
   width: 100%;
-  height: 30%;
+  height: 70%;
   display: inline-block;
   vertical-align: bottom;
+}
+.split_wrapper div.scroll_wrapper_upper_mesh {
+  width: 49%;
+  height: 30%;
+  display: inline-block;
+  vertical-align: top;
+  float: left;
+}
+.split_wrapper div.scroll_wrapper_lower_mesh {
+  width: 49%;
+  height: 70%;
+  display: inline-block;
+  float: left;
+}
+.split_wrapper div.scroll_wrapper_right_mesh {
+  width: 49%;
+  height: 100%;
+  display: inline-block;
+  float: right;
 }
 .wrapper_lower_label {
   margin-top: 0.5em;
 }
 .wrapper_lower_coref_label {
   margin-top: 0.5em;
+}
+.wrapper_right_mesh_label {
+  margin-left: 2.5em;
 }
 div.scroll_wrapper_lower div {
  padding-top: 0.5em;
@@ -287,12 +303,21 @@ div.scroll_wrapper_lower_coref div {
   width: 100%;
   height: 100%;
   border-style: inset inset none none;
-  border-width: 1px;
+  border-width: 2px;
 }
 div.scroll_wrapper_upper div.scroller {
   border-style: inset inset inset none;
 }
 div.scroll_wrapper_upper_coref div.scroller {
+  border-style: inset inset inset none;
+}
+div.scroll_wrapper_upper_mesh div.scroller {
+  border-style: inset inset inset none;
+}
+div.scroll_wrapper_lower_mesh div.scroller {
+  border-style: inset inset inset none;
+}
+div.scroll_wrapper_right_mesh div.scroller {
   border-style: inset inset inset none;
 }
 /* special-case visual tweak; not sure why this is necessary */

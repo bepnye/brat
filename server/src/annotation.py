@@ -300,9 +300,9 @@ class Annotations(object):
             # Our first attempts at finding the input by checking suffixes
             # failed, so we try to attach know suffixes to the path.
             # sugg_path = document + '.' + JOINED_ANN_FILE_SUFF
-            #user = self.user
-            user = 'shared'
-            init_ann(path_split(document)[0], user)
+            user = self.user
+            #user = 'shared'
+            init_ann(path_split(document)[0], user, 'interventions')
             eprint('Loading input files for %s in %s' %(user, document))
             sugg_path = document + '.' + user + '.' + JOINED_ANN_FILE_SUFF ##JESSY add user to file path
             #sugg_path = document + '.' + JOINED_ANN_FILE_SUFF ##JESSY add user to file path

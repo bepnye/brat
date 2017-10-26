@@ -1932,7 +1932,6 @@ var AnnotatorUI = (function($, window, undefined) {
           if (attr.unused) {
             $('<input type="hidden" id="'+attrId+'" value=""/>').appendTo($span);
           } else if (attr.bool) {
-            console.log(attr.name);
             var escapedName = Util.escapeQuotes(attr.name).replace(/_/g, ' ');
             var $input = $('<input type="checkbox" id="'+attrId+
                            '" value="' + escapedType + 
@@ -1958,7 +1957,7 @@ var AnnotatorUI = (function($, window, undefined) {
             $select.combobox();
             $select.change(onMultiAttrChange);
           }
-          $span.append('<br />'); // BEN: added for visibility
+          //$span.append('<br />'); // BEN: added for visibility
         });
       }
 
@@ -2440,6 +2439,7 @@ var AnnotatorUI = (function($, window, undefined) {
       dispatcher.post('initForm', [spanForm, {
           alsoResize: '#entity_and_event_wrapper',
           width: 760,
+          height: 300,
           buttons: [
 	    {
             //   id: 'span_form_add_fragment',

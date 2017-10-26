@@ -3413,7 +3413,6 @@ Util.profileStart('before render');
 
       var collectionLoaded = function(response) {
         if (!response.exception) {
-          console.log(response);
           setCollectionDefaults(response);
           eventAttributeTypes = loadAttributeTypes(response.event_attribute_types);
           entityAttributeTypes = loadAttributeTypes(response.entity_attribute_types);

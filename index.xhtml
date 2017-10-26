@@ -39,13 +39,12 @@
       head.ready(function() {
           // JESSY
           $("#uniqueid").html("Task complete! Your unique ID is: "+cur_guid);
-          $('#auth_button').hide();
           $('#prev').hide();
           $('#document_name').hide();
-          $('#pulldown').remove();
+          $('#pulldown').hide();
           // hide the Messager window if needed
           $('#pulluptrigger').remove();
-          //$('#messagepullup').hide();
+          $('#messagepullup').hide();
           $('#messages').hide();
           
           // var dispatcher = new Dispatcher(); // XXX DEBUG
@@ -798,12 +797,14 @@
     <form id="auth_form" class="dialog" title="Login">
       <fieldset>
         <legend>Username</legend>
-        <input id="auth_user" placeholder="Username" class="borderless"/>
+        <input id="auth_user" placeholder="Enter worker ID" class="borderless"/>
       </fieldset>
+      <!--
       <fieldset>
         <legend>Password</legend>
         <input id="auth_pass" type="password" placeholder="Password" class="borderless"/>
       </fieldset>
+      BEN: remove password -->
     </form>
     <!-- Split span annotation dialog -->
     <form id="split_form" class="dialog" title="Split the Span">

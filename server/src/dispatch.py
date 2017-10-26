@@ -37,7 +37,7 @@ from undo import undo
 from tag import tag
 from delete import delete_document, delete_collection
 from norm import norm_get_name, norm_search, norm_get_data
-from pico_semantics import write_corefs, get_next_doc
+from pico_semantics import write_corefs, write_mesh, get_next_doc
 
 # no-op function that can be invoked by client to log a user action
 def logging_no_op(collection, document, log):
@@ -105,6 +105,7 @@ DISPATCHER = {
         'convert': convert,
 
 	'write_corefs': write_corefs,#BEN
+	'write_mesh': write_mesh,#BEN
         'get_next_doc': get_next_doc,#BEN
        }
 
