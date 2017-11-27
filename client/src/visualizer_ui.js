@@ -1561,7 +1561,7 @@ var VisualizerUI = (function($, window, undefined) {
         new_doc = doc;
         new_coll = coll;
         if (top_dir == 'PICO') {
-          console.log(doc, dir);
+          console.log('PICO', doc, dir);
           getNextDoc(doc, dir);
         } else if (top_dir == 'HITs') {
           doc_names = hit_dir.split('_');
@@ -2120,7 +2120,8 @@ var VisualizerUI = (function($, window, undefined) {
       var hasPossibleCoref = function(type) {
         if (type == 'Multiple_Categories' ||
             type == 'Unknown' ||
-            type == 'Participants') {
+            type == 'Participants' ||
+            type == 'Treatment') {
           console.log('Rejecting coref type (always): ' + type);
           return false;
         } else {
@@ -2329,30 +2330,32 @@ var VisualizerUI = (function($, window, undefined) {
         var buttonIds = [];
         $.each(data.spans, function(spanNo, span) {
           console.log('Checking: ' + span.id);
+          if (hasPossibleCoref(span.type)) {
           var newId = true;
-          for (var i = 0; i < buttonIds.length; i++) {
-            var buttonId = buttonIds[i];
-            console.log('Checking against: ', buttonId);
-            var corefs = getCorefSpans(buttonId);
-            if (corefs.indexOf(span.id) >= 0) {
-              newId = false;
-              break;
+            for (var i = 0; i < buttonIds.length; i++) {
+              var buttonId = buttonIds[i];
+              console.log('Checking against: ', buttonId);
+              var corefs = getCorefSpans(buttonId);
+              if (corefs.indexOf(span.id) >= 0) {
+                newId = false;
+                break;
+              }
             }
-          }
-          if (newId) {
-            buttonIds.push(span.id);
-            var $span = $('<span class="attribute_type_label">' + '' + '</span>').appendTo($top);
-            var spanId = span.id + '_mesh';
-            var $input = $('<input type="radio" name="mesh_top"/>').
-              attr('id', spanId).
-              attr('value', span.id). 
-              attr('category', span.type);
-            var $label = $('<label for="'+ spanId +
-                           '" data-bare="' + spanId + '">' + 
-                           span.text + '</label>');
-            $span.append($input).append($label);
-            $input.button();
-            $input.change(onEquivClassChange);
+            if (newId) {
+              buttonIds.push(span.id);
+              var $span = $('<span class="attribute_type_label">' + '' + '</span>').appendTo($top);
+              var spanId = span.id + '_mesh';
+              var $input = $('<input type="radio" name="mesh_top"/>').
+                attr('id', spanId).
+                attr('value', span.id). 
+                attr('category', span.type);
+              var $label = $('<label for="'+ spanId +
+                             '" data-bare="' + spanId + '">' + 
+                             span.text + '</label>');
+              $span.append($input).append($label);
+              $input.button();
+              $input.change(onEquivClassChange);
+            }
           }
         });
       };

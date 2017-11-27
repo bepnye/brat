@@ -9,7 +9,7 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 TOP = '/home/ubuntu/pico/'
-LINK = 'http://ec2-54-161-242-138.compute-1.amazonaws.com:8001/index_00.xhtml#/pico'
+LINK = 'http://ec2-34-230-42-186.compute-1.amazonaws.com:8001/index_01.xhtml#/pico/PICO'
 
 NEXT_PMID_MAP = {}
 PREV_PMID_MAP = {}
@@ -117,7 +117,7 @@ def init_doc(DOC_TOP, pmid, bid, task = 'participants'):
           if m.strip() not in ['Male', 'Female', 'Humans', \
                 'Infant', 'Child, Preschool', 'Child', 'Adolescent', 'Young Adult', \
                 'Adult', 'Middle Aged', 'Aged', 'Aged, 80 and over']:
-            conf_fp.write('%s Arg:MeSH\n' %(m.strip().replace(' ', '_').replace(',', '')))
+            conf_fp.write('%s Arg:MeSH\n' %(m.strip().replace(' ', '/').replace(',', '')))
 
   init_ann(DOC_TOP, 'shared', task)
 
@@ -164,17 +164,25 @@ def init_all_collections(i = 0, n = None):
         DOC_TOP = '%s/%s/' %(HIT_TOP, pmid)
         init_doc(DOC_TOP, pmid, pmid)
 
-def init_all_docs(n = 10, task = 'interventions'):
-  pmids = [int(l.strip()) for l in open('%s/resources/pmids.txt' %TOP, 'r').readlines()][:n]
+def init_all_docs(n = 10, task = 'interventions', fname = None):
+  fname = fname or '%s/resources/pmids.txt' %TOP
+  pmids = [int(l.strip()) for l in open(fname, 'r').readlines()][:n]
   DOCS_TOP = '%s/brat_data/PICO/%s/' %(TOP, task)
   for pmid in pmids:
     DOC_TOP = '%s/%d/' %(DOCS_TOP, pmid)
     init_doc(DOC_TOP, pmid, pmid, task)
+  links_fname = '%s/links.txt' %(DOCS_TOP)
+  with open(links_fname, 'w') as links_fout:
+    for h in PMID_HITS[:len(pmids)/HIT_SIZE]:
+      if len(h) == HIT_SIZE:
+        hit_name = h[0]
+        links_fout.write('%s/%s/%s/%s\n' %(LINK, task, hit_name, h[0]))
 
-def init_seq_collection(n = None):
-  pmids = [l.strip() for l in open('%s/resources/pmids.txt' %TOP, 'r').readlines()]
+def init_seq_collection(n = None, task = 'interventions', fname = None):
+  fname = fname or '%s/resources/pmids.txt' %TOP
+  pmids = [l.strip() for l in open(fname, 'r').readlines()]
   pmids = pmids[:n]
   SEQ_TOP = '%s/brat_data/seq/%d/' %(TOP, len(pmids))
   for i,pmid in enumerate(pmids):
     DOC_TOP = '%s/%d/' %(SEQ_TOP, i)
-    init_doc(DOC_TOP, pmid, str(i))
+    init_doc(DOC_TOP, pmid, str(i), task)
