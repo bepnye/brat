@@ -164,16 +164,18 @@ def init_all_collections(i = 0, n = None):
         DOC_TOP = '%s/%s/' %(HIT_TOP, pmid)
         init_doc(DOC_TOP, pmid, pmid)
 
-def init_all_docs(n = 10, task = 'interventions', fname = None):
+def init_all_docs(n_i = 0, n = 10, task = 'interventions', fname = None):
   fname = fname or '%s/resources/pmids.txt' %TOP
-  pmids = [int(l.strip()) for l in open(fname, 'r').readlines()][:n]
+  pmids = [int(l.strip()) for l in open(fname, 'r').readlines()][n_i:n_i+n]
   DOCS_TOP = '%s/brat_data/PICO/%s/' %(TOP, task)
   for pmid in pmids:
     DOC_TOP = '%s/%d/' %(DOCS_TOP, pmid)
     init_doc(DOC_TOP, pmid, pmid, task)
   links_fname = '%s/links.txt' %(DOCS_TOP)
   with open(links_fname, 'w') as links_fout:
-    for h in PMID_HITS[:len(pmids)/HIT_SIZE]:
+    i_hit = n_i / HIT_SIZE
+    n_hit = len(pmids) / HIT_SIZE
+    for h in PMID_HITS[i_hit:i_hit+n_hit]:
       if len(h) == HIT_SIZE:
         hit_name = h[0]
         links_fout.write('%s/%s/%s/%s\n' %(LINK, task, hit_name, h[0]))
