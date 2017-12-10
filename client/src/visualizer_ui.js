@@ -1553,10 +1553,7 @@ var VisualizerUI = (function($, window, undefined) {
         if (curPicoColl.includes(pico3)) { return curPicoColl.replace(pico3, pico2); }
       };
 
-      var loadNewPico = function(dir) {
-        coll_pieces = coll.replace('//', '/').split('/');
-        top_dir = coll_pieces.slice(-4,-3)[0];
-        hit_dir = coll_pieces.slice(-3,-2)[0];
+      var loadNewPico = function(dir, coll_pieces, top_dir, hit_dir) {
         console.log(top_dir + '|' + hit_dir + '|' + doc);
         new_doc = doc;
         new_coll = coll;
@@ -1585,6 +1582,15 @@ var VisualizerUI = (function($, window, undefined) {
             new_coll = coll_pieces.slice(0, -2).join('/') + '/' + new_pos + '/';
             loadNewDoc(new_doc, new_coll, dir);
           }
+        } else if (top_dir == 'pico' && hit_dir == 'browse') {
+					cur_pos = currentSelectorPosition();
+				  max_pos = selectorData.items.length - 1;
+					new_pos = cur_pos + dir;
+					if (new_pos >= 0 && new_pos < max_pos) {
+            new_doc = selectorData.items[new_pos][2];
+            loadNewDoc(new_doc, new_coll, dir);
+					}
+
         }
         return false;
       };
@@ -1604,14 +1610,20 @@ var VisualizerUI = (function($, window, undefined) {
       };
 
       var moveInFileBrowser = function(dir) {
-        if (corefFinished == false) {
+        coll_pieces = coll.replace('//', '/').split('/');
+        top_dir = coll_pieces.slice(-4,-3)[0];
+        hit_dir = coll_pieces.slice(-3,-2)[0];
+
+        console.log('Caught move command, top = ', top_dir, ' hit = ', hit_dir);
+
+        if (corefFinished == false && hit_dir != 'browse') {
           // BEN: pop up the coref form before leaving the current document
           corefMoveDir = dir;
           fillAndDisplayCorefForm();
           return false;
         }
 
-        loadNewPico(dir);
+        loadNewPico(dir, coll_pieces, top_dir, hit_dir);
         return false;
       };
 
@@ -2122,7 +2134,7 @@ var VisualizerUI = (function($, window, undefined) {
             type == 'Unknown' ||
             type == 'Participants' ||
             type == 'Treatment') {
-          console.log('Rejecting coref type (always): ' + type);
+          //console.log('Rejecting coref type (always): ' + type);
           return false;
         } else {
           // Outdated! Used to only want subspans if > 1 existed for matching,
@@ -2329,12 +2341,11 @@ var VisualizerUI = (function($, window, undefined) {
 
         var buttonIds = [];
         $.each(data.spans, function(spanNo, span) {
-          console.log('Checking: ' + span.id);
+          //console.log('Checking: ' + span.id);
           if (hasPossibleCoref(span.type)) {
           var newId = true;
             for (var i = 0; i < buttonIds.length; i++) {
               var buttonId = buttonIds[i];
-              console.log('Checking against: ', buttonId);
               var corefs = getCorefSpans(buttonId);
               if (corefs.indexOf(span.id) >= 0) {
                 newId = false;
@@ -2828,7 +2839,7 @@ var VisualizerUI = (function($, window, undefined) {
         return moveInFileBrowser(+1);
       });
       $('#coref_button').button().click(function() {
-        return fillAndDisplayMeshForm();
+        return fillAndDisplayCorefForm();
       });
       $('#footer').show();
 

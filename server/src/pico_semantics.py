@@ -8,7 +8,9 @@ import sys, random
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
-TOP = '/home/ubuntu/pico/'
+CURRENT_TASK = 'outcomes'
+
+TOP = '/Users/ben/pico/'
 LINK = 'http://ec2-34-230-42-186.compute-1.amazonaws.com:8001/index_01.xhtml#/pico/PICO'
 
 NEXT_PMID_MAP = {}
@@ -24,75 +26,30 @@ for pmids in PMID_HITS:
 def shuffled(l):
   return random.sample(l, len(l))
 
-def parse_ann(fname, txt):
-  with open(fname) as fp:
-    lines = [l.strip() for l in fp.readlines()]
-    char_map = defaultdict(bool)
-    for l in lines:
-      l = l.split()
-      n, label, start, stop, span = l[0], l[1], l[2], l[3], ' '.join(l[4:])
-      try:
-        start = int(start)
-        stop = int(stop)
-        try:
-          assert span == txt[start:stop]
-        except AssertionError:
-          print(fname, 'txt: %s... != %s...' %(span[:10], txt[start:stop][:10]))
-          raise ValueError
-        for i in range(start, stop+1):
-          char_map[i] = True
-      except ValueError:
-        pass
-    return char_map
+def get_base_ann_fname(pmid, task):
+  ann_dir_name = { 'interventions': 'Treatment',
+                   'participants': 'Participants',
+                   'outcomes': 'Outcomes', }[task]
+  return '%s/resources/ann/%s/%s.ann' %(TOP, ann_dir_name, pmid)
 
-def include_char(c, char_maps):
-  return sum([m[c] for m in char_maps])/float(len(char_maps)) >= 0.3
-
-def get_gold_ann(pmid, e):
-  with open('%s/resources/txt/%d.txt' %(TOP, pmid)) as txt_fp:
-    txt = txt_fp.read()
-
-    input_anns = glob('%s/resources/ann/%s/%d.*.ann' %(TOP, e, pmid))
-    char_maps = [parse_ann(ann, txt) for ann in input_anns]
-    N = float(len(char_maps))
-    spans = []
-    MODE = 'idle'
-    SPAN_i = 0
-    for c in range(len(txt)+1):
-      if include_char(c, char_maps):
-        if MODE == 'idle':
-          SPAN_i = c
-          MODE = 'extend'
-        elif MODE == 'extend':
-          pass
-      else: # if c_scores[i] < 0.5
-        if MODE == 'extend':
-          spans.append((SPAN_i, c-1))
-          MODE = 'idle'
-        elif MODE == 'idle':
-          pass
-  lines = ['T%d\tUnknown %d %d\t%s' \
-      %(i+1, start, stop, txt[start:stop]) for i,(start,stop) in enumerate(spans)]
-  return '\n'.join(lines)
-
-def write_gold_ann(pmid, e):
-  with open('%s/resources/ann/%s/%d.ann' %(TOP, e, pmid), 'w') as fp_out:
-    fp_out.write(get_gold_ann(pmid, e))
-  
-def init_ann(doc_path, user, task):
-  bid = os.path.split(doc_path.strip('/'))[1]
-  #eprint(doc_path + ' | ' + bid)
-  user_ann = '%s/%s.%s.ann' %(doc_path, bid, user)
+def init_ann(doc_path, user, task = CURRENT_TASK):
+  path, bid = os.path.split(doc_path)
+  eprint(doc_path + ' | ' + bid)
+  user_ann = '%s/%s.%s.ann' %(path, bid, user)
   if os.path.isfile(user_ann):
     eprint('Found existing ann for %s in %s (%s)' %(user, doc_path, user_ann))
   else:
-    pmid = open('%s/pmid.info' %(doc_path)).read().strip()
-    ann_file = '%s/resources/ann/%s/%s.ann' %(TOP, task, pmid)
+    pmid_file = '%s/pmid.info' %(doc_path)
+    if os.path.isfile(pmid_file):
+      pmid = open(pmid_file).read().strip()
+    else:
+      pmid = bid
+    ann_file = get_base_ann_fname(pmid, task)
     eprint('Ann file = ' + ann_file)
     #eprint('Creating new ann for %s in %s' %(user, doc_path))
     os.system('cp %s %s' %(ann_file, user_ann))
 
-def init_doc(DOC_TOP, pmid, bid, task = 'participants'):
+def init_doc(DOC_TOP, pmid, bid, task = CURRENT_TASK):
   #eprint('Creating files for pmid %s (%s) in %s' %(pmid, bid, DOC_TOP))
   os.system('mkdir -p %s' %DOC_TOP)
 
@@ -127,7 +84,7 @@ def read_pmid_hits():
 def write_user_file(guid, coll, doc, string, suffix):
   eprint('Writing %s file for %s, %s' %(suffix, guid, doc))
   fout = '%s/%s.%s.%s' %(coll, doc, guid, suffix)
-  fout = fout.replace('/pico', '/home/ubuntu/pico/brat_data')
+  fout = fout.replace('/pico', TOP+'/brat_data')
   txt = string.replace(',', '\n')
   with open(fout, 'w') as fp:
     fp.write(txt)
@@ -164,7 +121,7 @@ def init_all_collections(i = 0, n = None):
         DOC_TOP = '%s/%s/' %(HIT_TOP, pmid)
         init_doc(DOC_TOP, pmid, pmid)
 
-def init_all_docs(n = 10, task = 'interventions', fname = None):
+def init_all_docs(n = 10, task = CURRENT_TASK, fname = None):
   fname = fname or '%s/resources/pmids.txt' %TOP
   pmids = [int(l.strip()) for l in open(fname, 'r').readlines()][:n]
   DOCS_TOP = '%s/brat_data/PICO/%s/' %(TOP, task)
@@ -178,7 +135,7 @@ def init_all_docs(n = 10, task = 'interventions', fname = None):
         hit_name = h[0]
         links_fout.write('%s/%s/%s/%s\n' %(LINK, task, hit_name, h[0]))
 
-def init_seq_collection(n = None, task = 'interventions', fname = None):
+def init_seq_collection(n = None, task = CURRENT_TASK, fname = None):
   fname = fname or '%s/resources/pmids.txt' %TOP
   pmids = [l.strip() for l in open(fname, 'r').readlines()]
   pmids = pmids[:n]

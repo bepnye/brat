@@ -302,7 +302,7 @@ class Annotations(object):
             # sugg_path = document + '.' + JOINED_ANN_FILE_SUFF
             user = self.user
             #user = 'shared'
-            init_ann(path_split(document)[0], user, 'interventions')
+            init_ann(document, user)
             eprint('Loading input files for %s in %s' %(user, document))
             sugg_path = document + '.' + user + '.' + JOINED_ANN_FILE_SUFF ##JESSY add user to file path
             #sugg_path = document + '.' + JOINED_ANN_FILE_SUFF ##JESSY add user to file path
