@@ -2438,8 +2438,8 @@ var AnnotatorUI = (function($, window, undefined) {
 
       dispatcher.post('initForm', [spanForm, {
           alsoResize: '#entity_and_event_wrapper',
-          width: 760,
-          height: 300,
+          width: 500,
+          height: 600,
           buttons: [
 	    {
             //   id: 'span_form_add_fragment',

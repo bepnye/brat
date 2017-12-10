@@ -10,7 +10,7 @@ def eprint(*args, **kwargs):
 
 CURRENT_TASK = 'outcomes'
 
-TOP = '/Users/ben/pico/'
+TOP = '/home/ubuntu/pico/'
 LINK = 'http://ec2-34-230-42-186.compute-1.amazonaws.com:8001/index_01.xhtml#/pico/PICO'
 
 NEXT_PMID_MAP = {}
@@ -39,7 +39,7 @@ def init_ann(doc_path, user, task = CURRENT_TASK):
   if os.path.isfile(user_ann):
     eprint('Found existing ann for %s in %s (%s)' %(user, doc_path, user_ann))
   else:
-    pmid_file = '%s/pmid.info' %(doc_path)
+    pmid_file = '%s/pmid.info' %(path)
     if os.path.isfile(pmid_file):
       pmid = open(pmid_file).read().strip()
     else:
@@ -74,7 +74,7 @@ def init_doc(DOC_TOP, pmid, bid, task = CURRENT_TASK):
           if m.strip() not in ['Male', 'Female', 'Humans', \
                 'Infant', 'Child, Preschool', 'Child', 'Adolescent', 'Young Adult', \
                 'Adult', 'Middle Aged', 'Aged', 'Aged, 80 and over']:
-            conf_fp.write('%s Arg:MeSH\n' %(m.strip().replace(' ', '/').replace(',', '')))
+            conf_fp.write('%s Arg:MeSH\n' %(m.strip().replace(' ', '_').replace(',', '')))
 
   init_ann(DOC_TOP, 'shared', task)
 

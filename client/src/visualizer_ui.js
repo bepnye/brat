@@ -2133,6 +2133,7 @@ var VisualizerUI = (function($, window, undefined) {
         if (type == 'Multiple_Categories' ||
             type == 'Unknown' ||
             type == 'Participants' ||
+            type == 'Outcomes' ||
             type == 'Treatment') {
           //console.log('Rejecting coref type (always): ' + type);
           return false;
@@ -2244,10 +2245,11 @@ var VisualizerUI = (function($, window, undefined) {
             var currentLabel = document.getElementById('equiv_classes_label');
             //currentLabel.innerText = 'Original snippet: ' + '...' + getSpanContext(clickedSpan, 15, bracketAndUpper) + '...';
 
-            var $top = $('#equiv_spans div.scroller');
-            var equivSpans = [clickedSpan.id] + getCorefSpans(clickedSpan.id);
+            var $top = $('#equiv_spans div.scroller').empty();
+            var equivSpans = clickedSpan.id + ',' + getCorefSpans(clickedSpan.id) + ',';
+            console.log(equivSpans);
             $.each(data.spans, function(spanNo, span) {
-              if (equivSpans.indexOf(span.id) >= 0) {
+              if (equivSpans.indexOf(span.id+',') >= 0) {
                 var $span = $('<span class="attribute_type_label"/>').appendTo($top);
                 var labelText = getSpanContext(span, 15, bracketAndUpper);
                 var $label = $('<label for="'+ span.id + '" ' +
@@ -2269,7 +2271,7 @@ var VisualizerUI = (function($, window, undefined) {
                              'mesh-id="' + mesh + '" ' +
                              'span-id="' + clickedSpan.id + '" ' +
                              'category="' + clickedSpan.generalType + '"/>');
-              var labelText = mesh;
+              var labelText = mesh.replace('_', ' ');
               var $label = $('<label for="'+ meshId + '" ' +
                              'data-bare="' + mesh + '" ' +
                              'label-text="' + labelText + '">' +
@@ -2335,6 +2337,8 @@ var VisualizerUI = (function($, window, undefined) {
 
       var fillAndDisplayMeshForm = function () {
         $('#mesh div.scroller').empty();
+        $('#equiv_classes div.scroller').empty();
+        $('#equiv_spans div.scroller').empty();
         dispatcher.post('showForm', [meshForm]);
         var $top = $('#equiv_classes div.scroller').empty();
         $('#mesh_form-ok').focus();
