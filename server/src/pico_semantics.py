@@ -121,7 +121,7 @@ def init_all_collections(i = 0, n = None):
         DOC_TOP = '%s/%s/' %(HIT_TOP, pmid)
         init_doc(DOC_TOP, pmid, pmid)
 
-def init_all_docs(n_i = 0, n = 10, task = 'interventions', fname = None):
+def init_all_docs(n_i = 0, n = 10, task = CURRENT_TASK, fname = None):
   fname = fname or '%s/resources/pmids.txt' %TOP
   pmids = [int(l.strip()) for l in open(fname, 'r').readlines()][n_i:n_i+n]
   DOCS_TOP = '%s/brat_data/PICO/%s/' %(TOP, task)
